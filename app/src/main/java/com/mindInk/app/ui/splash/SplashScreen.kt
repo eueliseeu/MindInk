@@ -23,7 +23,7 @@ import com.mindInk.app.ui.theme.MindInkBlack
 import com.mindInk.app.ui.theme.MindInkWhite
 import kotlinx.coroutines.delay
 
-private const val SPLASH_DURATION_MS = 2000L
+private const val SPLASH_DURATION_MS = 3000L
 
 @Composable
 fun SplashScreen(
