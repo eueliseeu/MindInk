@@ -116,7 +116,7 @@ fun LoginScreen(
             Button(
                 onClick = onGitHubClick,
                 enabled = !isLoading,
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(40.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF2A2A2A),
                     contentColor = MindInkWhite,
@@ -152,12 +152,12 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(15.dp))
 
             Button(
                 onClick = onGoogleClick,
                 enabled = !isLoading,
-                shape = RoundedCornerShape(28.dp),
+                shape = RoundedCornerShape(40.dp),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MindInkWhite,
                     contentColor = MindInkBlack,
@@ -185,7 +185,7 @@ fun LoginScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(84.dp))
         }
     }
 }
