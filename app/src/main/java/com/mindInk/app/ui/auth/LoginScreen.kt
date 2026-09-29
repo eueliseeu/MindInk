@@ -32,16 +32,18 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindInk.app.R
+import com.mindInk.app.domain.model.AuthProvider
 import com.mindInk.app.ui.theme.MindInkBlack
 import com.mindInk.app.ui.theme.MindInkWhite
 
 @Composable
 fun LoginScreen(
-    isLoading: Boolean = false,
-    errorMessage: String? = null,
+    loadingProvider: AuthProvider? = null,
     onGoogleClick: () -> Unit,
     onGitHubClick: () -> Unit
 ) {
+    val isLoading = loadingProvider != null
+
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
             painter = painterResource(id = R.drawable.c_mindink_background),
@@ -103,16 +105,6 @@ fun LoginScreen(
 
             Spacer(modifier = Modifier.height(28.dp))
 
-            if (errorMessage != null) {
-                Text(
-                    text = errorMessage,
-                    color = Color(0xFFFF6B6B),
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 12.dp)
-                )
-            }
-
             Button(
                 onClick = onGitHubClick,
                 enabled = !isLoading,
@@ -120,13 +112,14 @@ fun LoginScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color(0xFF2A2A2A),
                     contentColor = MindInkWhite,
-                    disabledContainerColor = Color(0xFF2A2A2A).copy(alpha = 0.6f)
+                    disabledContainerColor = Color(0xFF2A2A2A).copy(alpha = 0.6f),
+                    disabledContentColor = MindInkWhite.copy(alpha = 0.6f)
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                if (isLoading) {
+                if (loadingProvider == AuthProvider.GITHUB) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
                         color = MindInkWhite,
@@ -161,27 +154,36 @@ fun LoginScreen(
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MindInkWhite,
                     contentColor = MindInkBlack,
-                    disabledContainerColor = MindInkWhite.copy(alpha = 0.7f)
+                    disabledContainerColor = MindInkWhite.copy(alpha = 0.7f),
+                    disabledContentColor = MindInkBlack.copy(alpha = 0.6f)
                 ),
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(52.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.c_mindink_google),
-                        contentDescription = null,
-                        modifier = Modifier.size(20.dp)
+                if (loadingProvider == AuthProvider.GOOGLE) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(22.dp),
+                        color = MindInkBlack,
+                        strokeWidth = 2.dp
                     )
-                    Spacer(modifier = Modifier.width(10.dp))
-                    Text(
-                        text = "Entrar com Google",
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.Medium
-                    )
+                } else {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.c_mindink_google),
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "Entrar com Google",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
                 }
             }
 
