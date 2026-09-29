@@ -1,3 +1,12 @@
 <resources>
     <string name="app_name">MindInk</string>
+
+    <string name="auth_error_network">Sem conexão. Verifique sua internet e tente novamente.</string>
+    <string name="auth_error_no_google_account">Nenhuma conta Google disponível neste dispositivo.</string>
+    <string name="auth_error_account_collision">Já existe uma conta com este e-mail usando outro método de login.</string>
+    <string name="auth_error_invalid_credential">Credencial inválida. Tente novamente.</string>
+    <string name="auth_error_unknown">Não foi possível entrar. Tente novamente.</string>
+
+    <string name="home_placeholder_signed_in_as">Conectado como</string>
+    <string name="home_placeholder_sign_out">Sair</string>
 </resources>
