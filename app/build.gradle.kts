@@ -76,4 +76,6 @@ dependencies {
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.google.id)
     implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation(libs.coil.compose)
+    implementation(libs.coil.network.okhttp)
 }
