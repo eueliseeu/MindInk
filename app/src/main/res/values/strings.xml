@@ -3,9 +3,18 @@
 
     <string name="auth_error_network">Sem conexão. Verifique sua internet e tente novamente.</string>
     <string name="auth_error_no_google_account">Nenhuma conta Google disponível neste dispositivo.</string>
-    <string name="auth_error_account_collision">Já existe uma conta com este e-mail usando outro método de login.</string>
+    <string name="auth_error_account_collision">Esta conta já está vinculada a outro usuário do MindInk.</string>
     <string name="auth_error_invalid_credential">Credencial inválida. Tente novamente.</string>
     <string name="auth_error_unknown">Não foi possível entrar. Tente novamente.</string>
+
+    <string name="provider_google">Google</string>
+    <string name="provider_github">GitHub</string>
+    <string name="provider_unknown">outro provedor</string>
+
+    <string name="link_dialog_title">Vincular contas</string>
+    <string name="link_dialog_message">Já existe uma conta com este e-mail via %1$s. Entre com %1$s para vincular o %2$s.</string>
+    <string name="link_dialog_confirm">Continuar</string>
+    <string name="link_dialog_cancel">Cancelar</string>
 
     <string name="home_placeholder_signed_in_as">Conectado como</string>
     <string name="home_placeholder_sign_out">Sair</string>
