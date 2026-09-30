@@ -6,8 +6,14 @@ import com.mindInk.app.domain.model.AuthProvider
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.domain.repository.AuthErrorReason
 
+data class LinkRequest(
+    val pendingProvider: AuthProvider,
+    val existingProvider: AuthProvider
+)
+
 data class AuthUiState(
-    val loadingProvider: AuthProvider? = null
+    val loadingProvider: AuthProvider? = null,
+    val linkRequest: LinkRequest? = null
 ) {
     val isLoading: Boolean get() = loadingProvider != null
 }

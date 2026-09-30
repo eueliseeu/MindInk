@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.ui.auth.AuthViewModel
+import com.mindInk.app.ui.auth.LinkAccountDialog
 import com.mindInk.app.ui.auth.LoginScreen
 import com.mindInk.app.ui.auth.SessionState
 import com.mindInk.app.ui.auth.toMessageRes
@@ -57,14 +58,15 @@ class MainActivity : ComponentActivity() {
                             onFinished = { showSplash = false }
                         )
                     } else {
-                        when (val current = session) {
-                            is SessionState.Authenticated -> AuthenticatedPlaceholderScreen(
-                                user = current.user,
-                                onSignOut = viewModel::onSignOutClick
-                            )
+                        val current = session
+                        when {
+                            current is SessionState.Authenticated && !uiState.isLoading ->
+                                AuthenticatedPlaceholderScreen(
+                                    user = current.user,
+                                    onSignOut = viewModel::onSignOutClick
+                                )
 
-                            SessionState.Unauthenticated,
-                            SessionState.Loading -> LoginScreen(
+                            else -> LoginScreen(
                                 loadingProvider = uiState.loadingProvider,
                                 onGoogleClick = { viewModel.onGoogleClick(this@MainActivity) },
                                 onGitHubClick = { viewModel.onGitHubClick(this@MainActivity) }
@@ -76,6 +78,14 @@ class MainActivity : ComponentActivity() {
                         message = toast,
                         onDismiss = { toast = null }
                     )
+
+                    uiState.linkRequest?.let { request ->
+                        LinkAccountDialog(
+                            request = request,
+                            onConfirm = { viewModel.onConfirmLink(this@MainActivity) },
+                            onDismiss = viewModel::onDismissLink
+                        )
+                    }
                 }
             }
         }

@@ -6,6 +6,8 @@ import androidx.lifecycle.viewModelScope
 import com.mindInk.app.domain.model.AuthProvider
 import com.mindInk.app.domain.repository.AuthErrorReason
 import com.mindInk.app.domain.repository.SignInResult
+import com.mindInk.app.domain.usecase.auth.DiscardPendingLinkUseCase
+import com.mindInk.app.domain.usecase.auth.LinkPendingAccountUseCase
 import com.mindInk.app.domain.usecase.auth.ObserveAuthStateUseCase
 import com.mindInk.app.domain.usecase.auth.SignInWithGitHubUseCase
 import com.mindInk.app.domain.usecase.auth.SignInWithGoogleUseCase
@@ -28,6 +30,8 @@ class AuthViewModel @Inject constructor(
     observeAuthStateUseCase: ObserveAuthStateUseCase,
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     private val signInWithGitHubUseCase: SignInWithGitHubUseCase,
+    private val linkPendingAccountUseCase: LinkPendingAccountUseCase,
+    private val discardPendingLinkUseCase: DiscardPendingLinkUseCase,
     private val signOutUseCase: SignOutUseCase
 ) : ViewModel() {
 
@@ -55,6 +59,16 @@ class AuthViewModel @Inject constructor(
         launchSignIn(AuthProvider.GITHUB) { signInWithGitHubUseCase(activity) }
     }
 
+    fun onConfirmLink(activity: Activity) {
+        val request = _uiState.value.linkRequest ?: return
+        launchSignIn(request.existingProvider) { linkPendingAccountUseCase(activity) }
+    }
+
+    fun onDismissLink() {
+        discardPendingLinkUseCase()
+        _uiState.value = AuthUiState()
+    }
+
     fun onSignOutClick() {
         viewModelScope.launch { signOutUseCase() }
     }
@@ -65,7 +79,18 @@ class AuthViewModel @Inject constructor(
 
         viewModelScope.launch {
             val result = block()
-            _uiState.value = AuthUiState()
+
+            _uiState.value = when (result) {
+                is SignInResult.Success, SignInResult.Cancelled, is SignInResult.Error ->
+                    AuthUiState()
+
+                is SignInResult.LinkRequired -> AuthUiState(
+                    linkRequest = LinkRequest(
+                        pendingProvider = result.pendingProvider,
+                        existingProvider = result.existingProvider
+                    )
+                )
+            }
 
             if (result is SignInResult.Error) {
                 _errorEvents.send(result.reason)
