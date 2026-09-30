@@ -1,8 +1,10 @@
 package com.mindInk.app.data.auth
 
 import android.app.Activity
+import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
 import com.mindInk.app.domain.model.AuthProvider
@@ -25,6 +27,21 @@ internal class AuthRepositoryImpl @Inject constructor(
     private val googleCredentialProvider: GoogleCredentialProvider
 ) : AuthRepository {
 
+    private sealed interface PendingLink {
+        val provider: AuthProvider
+
+        data class Google(val credential: AuthCredential) : PendingLink {
+            override val provider: AuthProvider get() = AuthProvider.GOOGLE
+        }
+
+        data object GitHub : PendingLink {
+            override val provider: AuthProvider get() = AuthProvider.GITHUB
+        }
+    }
+
+    @Volatile
+    private var pendingLink: PendingLink? = null
+
     override fun observeAuthState(): Flow<AuthUser?> = callbackFlow {
         val listener = FirebaseAuth.AuthStateListener { auth ->
             trySend(auth.currentUser?.toAuthUser())
@@ -34,34 +51,82 @@ internal class AuthRepositoryImpl @Inject constructor(
     }.distinctUntilChanged()
 
     override suspend fun signInWithGoogle(activity: Activity): SignInResult =
+        googleSignIn(activity, linkOnCollision = true)
+
+    override suspend fun signInWithGitHub(activity: Activity): SignInResult =
+        gitHubSignIn(activity, linkOnCollision = true)
+
+    override suspend fun linkPendingAccount(activity: Activity): SignInResult {
+        val pending = pendingLink ?: return SignInResult.Error(AuthErrorReason.UNKNOWN)
+        pendingLink = null
+
+        val signIn = when (pending) {
+            is PendingLink.Google -> gitHubSignIn(activity, linkOnCollision = false)
+            PendingLink.GitHub -> googleSignIn(activity, linkOnCollision = false)
+        }
+        if (signIn !is SignInResult.Success) return signIn
+
+        val user = firebaseAuth.currentUser
+            ?: return SignInResult.Error(AuthErrorReason.UNKNOWN)
+
+        return try {
+            when (pending) {
+                is PendingLink.Google ->
+                    user.linkWithCredential(pending.credential).awaitTask()
+
+                PendingLink.GitHub ->
+                    user.startActivityForLinkWithProvider(activity, gitHubProvider()).awaitTask()
+            }
+            val linkedUser = firebaseAuth.currentUser ?: user
+            SignInResult.Success(linkedUser.toAuthUser(pending.provider))
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            if (e.isProviderAlreadyLinked()) signIn else e.toSignInResult()
+        }
+    }
+
+    override fun discardPendingLink() {
+        pendingLink = null
+    }
+
+    override suspend fun signOut() {
+        pendingLink = null
+        firebaseAuth.signOut()
+        googleCredentialProvider.clearState()
+    }
+
+    private suspend fun googleSignIn(activity: Activity, linkOnCollision: Boolean): SignInResult =
         when (val token = googleCredentialProvider.getIdToken(activity)) {
-            is GoogleTokenResult.Token -> firebaseSignIn(AuthProvider.GOOGLE) {
+            is GoogleTokenResult.Token -> {
                 val credential = GoogleAuthProvider.getCredential(token.idToken, null)
-                firebaseAuth.signInWithCredential(credential).awaitTask()
+                val pendingOnCollision = if (linkOnCollision) PendingLink.Google(credential) else null
+                firebaseSignIn(AuthProvider.GOOGLE, pendingOnCollision) {
+                    firebaseAuth.signInWithCredential(credential).awaitTask()
+                }
             }
 
             GoogleTokenResult.Cancelled -> SignInResult.Cancelled
             is GoogleTokenResult.Error -> SignInResult.Error(token.reason)
         }
 
-    override suspend fun signInWithGitHub(activity: Activity): SignInResult =
-        firebaseSignIn(AuthProvider.GITHUB) {
-            val provider = OAuthProvider.newBuilder(GITHUB_PROVIDER_ID)
-                .setScopes(listOf(GITHUB_EMAIL_SCOPE))
-                .build()
-
+    private suspend fun gitHubSignIn(activity: Activity, linkOnCollision: Boolean): SignInResult {
+        val pendingOnCollision = if (linkOnCollision) PendingLink.GitHub else null
+        return firebaseSignIn(AuthProvider.GITHUB, pendingOnCollision) {
             val pending = firebaseAuth.pendingAuthResult
-            (pending ?: firebaseAuth.startActivityForSignInWithProvider(activity, provider))
+            (pending ?: firebaseAuth.startActivityForSignInWithProvider(activity, gitHubProvider()))
                 .awaitTask()
         }
-
-    override suspend fun signOut() {
-        firebaseAuth.signOut()
-        googleCredentialProvider.clearState()
     }
+
+    private fun gitHubProvider(): OAuthProvider =
+        OAuthProvider.newBuilder(GITHUB_PROVIDER_ID)
+            .setScopes(listOf(GITHUB_EMAIL_SCOPE))
+            .build()
 
     private suspend fun firebaseSignIn(
         provider: AuthProvider,
+        pendingOnCollision: PendingLink?,
         block: suspend () -> AuthResult
     ): SignInResult = try {
         val result = block()
@@ -78,6 +143,20 @@ internal class AuthRepositoryImpl @Inject constructor(
     } catch (e: CancellationException) {
         throw e
     } catch (e: Exception) {
-        e.toSignInResult()
+        if (pendingOnCollision != null && e is FirebaseAuthUserCollisionException) {
+            pendingLink = pendingOnCollision
+            SignInResult.LinkRequired(
+                pendingProvider = provider,
+                existingProvider = provider.counterpart()
+            )
+        } else {
+            e.toSignInResult()
+        }
+    }
+
+    private fun AuthProvider.counterpart(): AuthProvider = when (this) {
+        AuthProvider.GOOGLE -> AuthProvider.GITHUB
+        AuthProvider.GITHUB -> AuthProvider.GOOGLE
+        AuthProvider.UNKNOWN -> AuthProvider.UNKNOWN
     }
 }

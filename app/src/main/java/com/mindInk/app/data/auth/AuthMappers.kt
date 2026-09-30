@@ -16,6 +16,7 @@ private const val GOOGLE_PROVIDER_ID = "google.com"
 private const val GITHUB_PROVIDER_ID = "github.com"
 private const val GOOGLE_PHOTO_HOST = "googleusercontent.com"
 private const val GOOGLE_PHOTO_SIZE = "=s400-c"
+
 private val GOOGLE_PHOTO_SIZE_REGEX = Regex("=s\\d+-c$")
 
 internal fun FirebaseUser.toAuthUser(
@@ -58,7 +59,7 @@ internal fun Exception.toSignInResult(): SignInResult = when {
     this is FirebaseAuthInvalidCredentialsException ->
         SignInResult.Error(AuthErrorReason.INVALID_CREDENTIAL)
 
-    this is FirebaseAuthException && isWebContextCanceled() ->
+    this is FirebaseAuthException && normalizedCode().contains("WEB_CONTEXT_CANCELED") ->
         SignInResult.Cancelled
 
     else -> {
@@ -67,5 +68,8 @@ internal fun Exception.toSignInResult(): SignInResult = when {
     }
 }
 
-private fun FirebaseAuthException.isWebContextCanceled(): Boolean =
-    errorCode.uppercase().replace('-', '_').contains("WEB_CONTEXT_CANCELED")
+internal fun Exception.isProviderAlreadyLinked(): Boolean =
+    this is FirebaseAuthException && normalizedCode().contains("PROVIDER_ALREADY_LINKED")
+
+private fun FirebaseAuthException.normalizedCode(): String =
+    errorCode.uppercase().replace('-', '_')
