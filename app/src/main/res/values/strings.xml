@@ -22,5 +22,29 @@
     <string name="topbar_sign_out">Sair</string>
 
     <string name="screen_articles">MindInk.</string>
-    <string name="articles_empty">Nenhum artigo por aqui ainda.</string>
+
+    <string name="articles_latest_title">Últimos Artigos</string>
+    <string name="articles_add">Criar artigo</string>
+    <string name="article_stars">Estrelas</string>
+
+    <string name="posted_just_now">Postado agora</string>
+    <plurals name="posted_minutes_ago">
+        <item quantity="one">Postado há %d Minuto</item>
+        <item quantity="other">Postado há %d Minutos</item>
+    </plurals>
+    <plurals name="posted_hours_ago">
+        <item quantity="one">Postado há %d Hora</item>
+        <item quantity="other">Postado há %d Horas</item>
+    </plurals>
+    <plurals name="posted_days_ago">
+        <item quantity="one">Postado há %d Dia</item>
+        <item quantity="other">Postado há %d Dias</item>
+    </plurals>
+    <plurals name="posted_months_ago">
+        <item quantity="one">Postado há %d Mês</item>
+        <item quantity="other">Postado há %d Meses</item>
+    </plurals>
+
+    <string name="home_placeholder_signed_in_as">Conectado como</string>
+    <string name="home_placeholder_sign_out">Sair</string>
 </resources>
