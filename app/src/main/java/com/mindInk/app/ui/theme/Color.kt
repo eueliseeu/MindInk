@@ -3,6 +3,7 @@ package com.mindInk.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val MindInkBlack = Color(0xFF0A0A0A)
+val MindInkBackground = Color(0xFF131313)
 val MindInkSurface = Color(0xFF141414)
 val MindInkSurfaceVariant = Color(0xFF1C1C1C)
 val MindInkBorder = Color(0xFF2A2A2A)
