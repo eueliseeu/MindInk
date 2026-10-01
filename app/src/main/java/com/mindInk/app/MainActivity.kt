@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mindInk.app.ui.articles.ArticlesScreen
 import com.mindInk.app.ui.auth.AuthViewModel
 import com.mindInk.app.ui.auth.LinkAccountDialog
 import com.mindInk.app.ui.auth.LoginScreen
@@ -25,7 +26,6 @@ import com.mindInk.app.ui.auth.SessionState
 import com.mindInk.app.ui.auth.toMessageRes
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
-import com.mindInk.app.ui.home.AuthenticatedPlaceholderScreen
 import com.mindInk.app.ui.splash.SplashScreen
 import com.mindInk.app.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -39,6 +39,7 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
+
                 val resources by rememberUpdatedState(LocalResources.current)
                 val viewModel: AuthViewModel = hiltViewModel()
                 val session by viewModel.sessionState.collectAsState()
@@ -61,7 +62,7 @@ class MainActivity : ComponentActivity() {
                         val current = session
                         when {
                             current is SessionState.Authenticated && !uiState.isLoading ->
-                                AuthenticatedPlaceholderScreen(
+                                ArticlesScreen(
                                     user = current.user,
                                     onSignOut = viewModel::onSignOutClick
                                 )
