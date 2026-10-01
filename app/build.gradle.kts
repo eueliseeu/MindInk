@@ -78,4 +78,6 @@ dependencies {
     implementation("androidx.core:core-splashscreen:1.0.1")
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
+    implementation(libs.markdown.renderer)
+    implementation(libs.markdown.renderer.m3)
 }
