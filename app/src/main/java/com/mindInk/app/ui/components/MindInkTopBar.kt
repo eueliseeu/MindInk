@@ -1,13 +1,16 @@
 package com.mindInk.app.ui.components
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -15,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -30,8 +34,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
@@ -52,21 +54,23 @@ import com.mindInk.app.ui.theme.MindInkWhite
 private val LogoSize = 44.dp
 private val SearchButtonSize = 44.dp
 private val AvatarSize = 48.dp
-
-// Espaço entre a status bar e o conteúdo da barra
 private val TopBarTopPadding = 28.dp
-
-// Distância entre o avatar e o menu aberto
 private val MenuGap = 6.dp
 
 @Composable
 fun MindInkTopBar(
     screenTitle: String,
     user: AuthUser,
-    onSearchClick: () -> Unit,
-    onSignOut: () -> Unit,
+    onSearchClick: () -> Unit = {},
+    onSignOut: () -> Unit = {},
+    onBack: (() -> Unit)? = null,
+    showSearch: Boolean = true,
+    showUserMenu: Boolean = true,
     modifier: Modifier = Modifier
 ) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    val density = LocalDensity.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -75,97 +79,117 @@ fun MindInkTopBar(
             .padding(start = 20.dp, end = 20.dp, top = TopBarTopPadding, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (onBack != null) {
+            IconButton(
+                onClick = onBack,
+                modifier = Modifier.size(LogoSize)
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                    contentDescription = "Voltar",
+                    tint = MindInkWhite
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
+        }
+
         Image(
             painter = painterResource(id = R.drawable.ic_mindink_logo),
             contentDescription = "MindInk",
-            contentScale = ContentScale.Fit,
             modifier = Modifier.size(LogoSize)
         )
 
-        Spacer(modifier = Modifier.width(20.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Text(
-            text = stringResource(R.string.topbar_title_format, screenTitle),
+            text = screenTitle,
             color = MindInkWhite,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
 
-        IconButton(
-            onClick = onSearchClick,
-            modifier = Modifier.size(SearchButtonSize),
-            colors = IconButtonDefaults.iconButtonColors(
-                containerColor = Color.Black,
-                contentColor = MindInkWhite
-            )
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.Search,
-                contentDescription = stringResource(R.string.topbar_search),
-                modifier = Modifier.size(22.dp)
-            )
+        if (showSearch) {
+            IconButton(
+                onClick = onSearchClick,
+                modifier = Modifier.size(SearchButtonSize),
+                colors = IconButtonDefaults.iconButtonColors(contentColor = MindInkWhite)
+            ) {
+                Icon(
+                    imageVector = Icons.Rounded.Search,
+                    contentDescription = stringResource(R.string.topbar_search)
+                )
+            }
+            Spacer(modifier = Modifier.width(4.dp))
         }
 
-        Spacer(modifier = Modifier.width(12.dp))
-
-        UserMenu(
-            user = user,
-            onSignOut = onSignOut
-        )
-    }
-}
-
-@Composable
-private fun UserMenu(
-    user: AuthUser,
-    onSignOut: () -> Unit
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val menuOffsetY = with(LocalDensity.current) { (AvatarSize + MenuGap).roundToPx() }
-
-    Box {
-        Box(
-            modifier = Modifier
-                .clip(CircleShape)
-                .clickable(
-                    onClickLabel = stringResource(R.string.topbar_open_menu),
-                    role = Role.Button
-                ) { expanded = true }
-        ) {
+        Box {
             UserAvatar(
                 photoUrl = user.photoUrl,
-                name = user.displayName ?: user.email,
-                size = AvatarSize
-            )
-        }
-
-        if (expanded) {
-            Popup(
-                alignment = Alignment.TopEnd,
-                offset = IntOffset(x = 0, y = menuOffsetY),
-                onDismissRequest = { expanded = false },
-                properties = PopupProperties(focusable = true)
-            ) {
-                Surface(
-                    shape = RoundedCornerShape(12.dp),
-                    color = MindInkSurfaceVariant,
-                    border = BorderStroke(1.dp, MindInkBorder)
-                ) {
-                    Text(
-                        text = stringResource(R.string.topbar_sign_out),
-                        color = MindInkWhite,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier
-                            .clickable {
-                                expanded = false
-                                onSignOut()
-                            }
-                            .padding(horizontal = 16.dp, vertical = 10.dp)
+                name = user.displayName,
+                size = AvatarSize,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable(
+                        role = Role.Button,
+                        onClick = {
+                            if (showUserMenu) menuExpanded = true
+                        }
                     )
+            )
+
+            if (showUserMenu && menuExpanded) {
+                Popup(
+                    alignment = Alignment.TopEnd,
+                    offset = IntOffset(
+                        x = 0,
+                        y = with(density) { (AvatarSize + MenuGap).roundToPx() }
+                    ),
+                    onDismissRequest = { menuExpanded = false },
+                    properties = PopupProperties(focusable = true)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MindInkSurfaceVariant,
+                        border = androidx.compose.foundation.BorderStroke(1.dp, MindInkBorder),
+                        shadowElevation = 8.dp
+                    ) {
+                        Column(
+                            modifier = Modifier
+                                .width(180.dp)
+                                .padding(vertical = 8.dp)
+                        ) {
+                            Text(
+                                text = user.displayName ?: user.email.orEmpty(),
+                                color = MindInkWhite,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(1.dp)
+                                    .background(MindInkBorder)
+                            )
+                            Text(
+                                text = stringResource(R.string.topbar_sign_out),
+                                color = MindInkWhite,
+                                fontSize = 14.sp,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        menuExpanded = false
+                                        onSignOut()
+                                    }
+                                    .padding(horizontal = 16.dp, vertical = 12.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
