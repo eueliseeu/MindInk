@@ -6,11 +6,13 @@ data class Article(
     val authorName: String,
     val authorUsername: String,
     val title: String,
+    val subtitle: String = "",
     val content: String,
     val linkUrl: String = "",
     val starredBy: List<String> = emptyList(),
     val starCount: Int = 0,
-    val createdAt: Long
+    val createdAt: Long,
+    val updatedAt: Long = 0L
 ) {
     fun preview(maxChars: Int = 160): String {
         val text = content.trim()

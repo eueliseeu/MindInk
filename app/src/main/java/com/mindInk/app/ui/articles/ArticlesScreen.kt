@@ -30,7 +30,8 @@ fun ArticlesScreen(
     onArticleClick: (ArticleCardUi) -> Unit = {}
 ) {
     val latestArticles = remember { articlePlaceholders() }
-    val navigationBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+    val navigationBarPadding =
+        WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
     Column(
         modifier = Modifier
