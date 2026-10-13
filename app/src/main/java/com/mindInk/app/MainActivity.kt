@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.ui.articles.ArticlesScreen
+import com.mindInk.app.ui.articles.editor.CreateEditArticleScreen
 import com.mindInk.app.ui.auth.AuthViewModel
 import com.mindInk.app.ui.auth.LinkAccountDialog
 import com.mindInk.app.ui.auth.LoginScreen
@@ -39,12 +40,12 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             AppTheme {
-
                 val resources by rememberUpdatedState(LocalResources.current)
                 val viewModel: AuthViewModel = hiltViewModel()
                 val session by viewModel.sessionState.collectAsState()
                 val uiState by viewModel.uiState.collectAsState()
                 var showSplash by rememberSaveable { mutableStateOf(true) }
+                var showCreateArticle by rememberSaveable { mutableStateOf(false) }
                 var toast by remember { mutableStateOf<ToastMessage?>(null) }
 
                 LaunchedEffect(viewModel) {
@@ -61,17 +62,33 @@ class MainActivity : ComponentActivity() {
                     } else {
                         val current = session
                         when {
-                            current is SessionState.Authenticated && !uiState.isLoading ->
-                                ArticlesScreen(
-                                    user = current.user,
-                                    onSignOut = viewModel::onSignOutClick
-                                )
+                            current is SessionState.Authenticated && !uiState.isLoading -> {
+                                if (showCreateArticle) {
+                                    CreateEditArticleScreen(
+                                        user = current.user,
+                                        onBack = { showCreateArticle = false },
+                                        onSaved = {
+                                            showCreateArticle = false
+                                            toast = ToastMessage("Artigo pronto (salvamento no Firestore no próximo passo).")
+                                        }
+                                    )
+                                } else {
+                                    ArticlesScreen(
+                                        user = current.user,
+                                        onSignOut = viewModel::onSignOutClick,
+                                        onAddArticleClick = { showCreateArticle = true }
+                                    )
+                                }
+                            }
 
-                            else -> LoginScreen(
-                                loadingProvider = uiState.loadingProvider,
-                                onGoogleClick = { viewModel.onGoogleClick(this@MainActivity) },
-                                onGitHubClick = { viewModel.onGitHubClick(this@MainActivity) }
-                            )
+                            else -> {
+                                showCreateArticle = false
+                                LoginScreen(
+                                    loadingProvider = uiState.loadingProvider,
+                                    onGoogleClick = { viewModel.onGoogleClick(this@MainActivity) },
+                                    onGitHubClick = { viewModel.onGitHubClick(this@MainActivity) }
+                                )
+                            }
                         }
                     }
 
