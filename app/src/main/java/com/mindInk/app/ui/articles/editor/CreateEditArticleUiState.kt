@@ -4,6 +4,7 @@ data class CreateEditArticleUiState(
     val articleId: String? = null,
     val isEditMode: Boolean = false,
     val authorLabel: String = "",
+    val category: String = "",
     val title: String = "",
     val subtitle: String = "",
     val content: String = "",
