@@ -1,8 +1,8 @@
 package com.mindInk.app.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
@@ -36,7 +35,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -46,6 +44,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Popup
 import androidx.compose.ui.window.PopupProperties
 import com.mindInk.app.R
+import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.theme.MindInkBorder
 import com.mindInk.app.ui.theme.MindInkSurfaceVariant
@@ -64,12 +63,14 @@ fun MindInkTopBar(
     onSearchClick: () -> Unit = {},
     onSignOut: () -> Unit = {},
     onBack: (() -> Unit)? = null,
+    onProfileClick: (() -> Unit)? = null,
     showSearch: Boolean = true,
     showUserMenu: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val density = LocalDensity.current
+    val displayName = formatAuthorName(user.displayName ?: user.email)
 
     Row(
         modifier = modifier
@@ -119,7 +120,7 @@ fun MindInkTopBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Search,
-                    contentDescription = stringResource(R.string.topbar_search)
+                    contentDescription = "Buscar"
                 )
             }
             Spacer(modifier = Modifier.width(4.dp))
@@ -153,7 +154,7 @@ fun MindInkTopBar(
                     Surface(
                         shape = RoundedCornerShape(12.dp),
                         color = MindInkSurfaceVariant,
-                        border = androidx.compose.foundation.BorderStroke(1.dp, MindInkBorder),
+                        border = BorderStroke(1.dp, MindInkBorder),
                         shadowElevation = 8.dp
                     ) {
                         Column(
@@ -162,7 +163,7 @@ fun MindInkTopBar(
                                 .padding(vertical = 8.dp)
                         ) {
                             Text(
-                                text = user.displayName ?: user.email.orEmpty(),
+                                text = displayName,
                                 color = MindInkWhite,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.Medium,
@@ -170,14 +171,31 @@ fun MindInkTopBar(
                                 overflow = TextOverflow.Ellipsis,
                                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                             )
+
                             Box(
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(1.dp)
                                     .background(MindInkBorder)
                             )
+
+                            if (onProfileClick != null) {
+                                Text(
+                                    text = "Perfil",
+                                    color = MindInkWhite,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            menuExpanded = false
+                                            onProfileClick()
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
                             Text(
-                                text = stringResource(R.string.topbar_sign_out),
+                                text = "Sair",
                                 color = MindInkWhite,
                                 fontSize = 14.sp,
                                 modifier = Modifier
