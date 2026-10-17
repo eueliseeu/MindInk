@@ -30,6 +30,14 @@ class CreateEditArticleViewModel @Inject constructor(
 
     private var boundUser: AuthUser? = null
 
+    fun resetForNewArticle(user: AuthUser) {
+        boundUser = user
+        val name = user.displayName?.takeIf { it.isNotBlank() }
+            ?: user.email?.substringBefore("@")
+            ?: "Autor"
+        _uiState.value = CreateEditArticleUiState(authorLabel = name)
+    }
+
     fun bindAuthor(user: AuthUser) {
         boundUser = user
         val name = user.displayName?.takeIf { it.isNotBlank() }
@@ -153,14 +161,11 @@ class CreateEditArticleViewModel @Inject constructor(
                     )
                 ) {
                     is CreateArticleResult.Success -> {
-                        _uiState.update {
-                            it.copy(
-                                isSaving = false,
-                                saved = true,
-                                articleId = result.articleId,
-                                errorMessage = null
-                            )
-                        }
+                        val name = _uiState.value.authorLabel
+                        _uiState.value = CreateEditArticleUiState(
+                            authorLabel = name,
+                            saved = true
+                        )
                     }
                     is CreateArticleResult.Error -> {
                         _uiState.update {
