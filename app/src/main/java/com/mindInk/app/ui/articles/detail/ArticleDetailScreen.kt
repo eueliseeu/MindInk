@@ -16,8 +16,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Star
-import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.outlined.Favorite
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonDefaults
@@ -32,6 +32,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -41,6 +42,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.mikepenz.markdown.m3.Markdown
+import com.mindInk.app.R
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.components.MindInkTopBar
@@ -49,7 +51,7 @@ import com.mindInk.app.ui.components.ToastMessage
 import com.mindInk.app.ui.theme.MindInkBlack
 import com.mindInk.app.ui.theme.MindInkDim
 import com.mindInk.app.ui.theme.MindInkMuted
-import com.mindInk.app.ui.theme.MindInkStar
+import com.mindInk.app.ui.theme.MindInkHeart
 import com.mindInk.app.ui.theme.MindInkWhite
 import kotlinx.coroutines.delay
 
@@ -209,7 +211,7 @@ fun ArticleDetailScreen(
                     onClick = viewModel::onToggleStar,
                     shape = CircleShape,
                     containerColor = MindInkBlack,
-                    contentColor = if (state.isStarredByMe) MindInkStar else MindInkWhite,
+                    contentColor = if (state.isStarredByMe) MindInkHeart else MindInkWhite,
                     elevation = FloatingActionButtonDefaults.elevation(
                         defaultElevation = 6.dp
                     ),
@@ -217,12 +219,14 @@ fun ArticleDetailScreen(
                 ) {
                     Icon(
                         imageVector = if (state.isStarredByMe) {
-                            Icons.Rounded.Star
+                            Icons.Rounded.Favorite
                         } else {
-                            Icons.Outlined.Star
+                            Icons.Outlined.Favorite
                         },
-                        contentDescription = "Estrela",
-                        tint = if (state.isStarredByMe) MindInkStar else MindInkWhite,
+                        contentDescription = stringResource(
+                            if (state.isStarredByMe) R.string.article_unlike else R.string.article_like
+                        ),
+                        tint = if (state.isStarredByMe) MindInkHeart else MindInkWhite,
                         modifier = Modifier.size(26.dp)
                     )
                 }

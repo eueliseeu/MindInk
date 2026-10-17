@@ -31,6 +31,11 @@ sealed interface ToggleStarResult {
 interface ArticleRepository {
     fun observeArticles(limit: Long = 50): Flow<ObserveArticlesResult>
 
+    fun observeArticlesByAuthor(
+        authorUid: String,
+        limit: Long = 50
+    ): Flow<ObserveArticlesResult>
+
     suspend fun getArticleById(articleId: String): Article?
 
     suspend fun createArticle(

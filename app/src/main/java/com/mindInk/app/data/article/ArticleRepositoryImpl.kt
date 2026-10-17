@@ -32,7 +32,36 @@ class ArticleRepositoryImpl @Inject constructor(
             .limit(limit)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
-                    trySend(ObserveArticlesResult.Error(error.message ?: "Falha ao carregar artigos."))
+                    trySend(
+                        ObserveArticlesResult.Error(
+                            error.message ?: "Falha ao carregar artigos."
+                        )
+                    )
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents
+                    ?.mapNotNull { it.toArticle() }
+                    .orEmpty()
+                trySend(ObserveArticlesResult.Success(list))
+            }
+        awaitClose { registration.remove() }
+    }
+
+    override fun observeArticlesByAuthor(
+        authorUid: String,
+        limit: Long
+    ): Flow<ObserveArticlesResult> = callbackFlow {
+        val registration = articles
+            .whereEqualTo("authorUid", authorUid)
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(limit)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(
+                        ObserveArticlesResult.Error(
+                            error.message ?: "Falha ao carregar artigos do autor."
+                        )
+                    )
                     return@addSnapshotListener
                 }
                 val list = snapshot?.documents
@@ -165,7 +194,7 @@ class ArticleRepositoryImpl @Inject constructor(
             }.await()
             ToggleStarResult.Success
         } catch (e: Exception) {
-            ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a estrela.")
+            ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a curtida.")
         }
     }
 }
