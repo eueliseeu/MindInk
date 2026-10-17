@@ -5,6 +5,8 @@ data class Article(
     val authorUid: String,
     val authorName: String,
     val authorUsername: String,
+    val authorPhotoUrl: String? = null,
+    val category: String = "",
     val title: String,
     val subtitle: String = "",
     val content: String,

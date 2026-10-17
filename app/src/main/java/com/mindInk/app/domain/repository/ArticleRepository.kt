@@ -37,7 +37,10 @@ interface ArticleRepository {
         authorUid: String,
         authorName: String,
         authorUsername: String,
+        authorPhotoUrl: String?,
+        category: String,
         title: String,
+        subtitle: String,
         content: String,
         linkUrl: String
     ): CreateArticleResult
@@ -45,7 +48,9 @@ interface ArticleRepository {
     suspend fun updateArticle(
         articleId: String,
         authorUid: String,
+        category: String,
         title: String,
+        subtitle: String,
         content: String,
         linkUrl: String
     ): UpdateArticleResult
