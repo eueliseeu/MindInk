@@ -25,7 +25,9 @@
 
     <string name="articles_latest_title">Últimos Artigos</string>
     <string name="articles_add">Criar artigo</string>
-    <string name="article_stars">Estrelas</string>
+    <string name="article_likes">Curtidas</string>
+    <string name="article_like">Curtir artigo</string>
+    <string name="article_unlike">Remover curtida</string>
 
     <string name="posted_just_now">Postado agora</string>
     <plurals name="posted_minutes_ago">

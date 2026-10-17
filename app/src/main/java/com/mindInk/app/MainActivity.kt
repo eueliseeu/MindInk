@@ -28,6 +28,7 @@ import com.mindInk.app.ui.auth.SessionState
 import com.mindInk.app.ui.auth.toMessageRes
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
+import com.mindInk.app.ui.profile.AuthorProfileScreen
 import com.mindInk.app.ui.splash.SplashScreen
 import com.mindInk.app.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -48,6 +49,7 @@ class MainActivity : ComponentActivity() {
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
                 var selectedArticleId by rememberSaveable { mutableStateOf<String?>(null) }
+                var selectedAuthorUid by rememberSaveable { mutableStateOf<String?>(null) }
                 var toast by remember { mutableStateOf<ToastMessage?>(null) }
 
                 LaunchedEffect(viewModel) {
@@ -75,6 +77,19 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    selectedAuthorUid != null -> {
+                                        AuthorProfileScreen(
+                                            authorUid = selectedAuthorUid!!,
+                                            user = current.user,
+                                            onBack = { selectedAuthorUid = null },
+                                            onArticleClick = { card ->
+                                                selectedAuthorUid = null
+                                                selectedArticleId = card.id
+                                            },
+                                            onSignOut = viewModel::onSignOutClick
+                                        )
+                                    }
+
                                     showCreateArticle -> {
                                         CreateEditArticleScreen(
                                             user = current.user,
@@ -94,6 +109,9 @@ class MainActivity : ComponentActivity() {
                                             onAddArticleClick = { showCreateArticle = true },
                                             onArticleClick = { card ->
                                                 selectedArticleId = card.id
+                                            },
+                                            onAuthorClick = { author ->
+                                                selectedAuthorUid = author.uid
                                             }
                                         )
                                     }
@@ -103,6 +121,7 @@ class MainActivity : ComponentActivity() {
                             else -> {
                                 showCreateArticle = false
                                 selectedArticleId = null
+                                selectedAuthorUid = null
                                 LoginScreen(
                                     loadingProvider = uiState.loadingProvider,
                                     onGoogleClick = { viewModel.onGoogleClick(this@MainActivity) },
