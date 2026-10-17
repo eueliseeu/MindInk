@@ -37,6 +37,7 @@ import com.mindInk.app.ui.theme.MindInkWhite
 fun ArticlesScreen(
     user: AuthUser,
     onSignOut: () -> Unit,
+    onProfileClick: (() -> Unit)? = null,
     onSearchClick: () -> Unit = {},
     onAddArticleClick: () -> Unit = {},
     onArticleClick: (ArticleCardUi) -> Unit = {},
@@ -56,7 +57,8 @@ fun ArticlesScreen(
             screenTitle = stringResource(R.string.screen_articles),
             user = user,
             onSearchClick = onSearchClick,
-            onSignOut = onSignOut
+            onSignOut = onSignOut,
+            onProfileClick = onProfileClick
         )
 
         if (state.isLoading) {
