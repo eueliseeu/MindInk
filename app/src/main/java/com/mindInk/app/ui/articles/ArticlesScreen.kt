@@ -25,6 +25,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
 import com.mindInk.app.domain.model.AuthUser
+import com.mindInk.app.ui.articles.components.AuthorsSection
 import com.mindInk.app.ui.articles.components.LatestArticlesSection
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.components.MindInkTopBar
@@ -94,6 +95,15 @@ fun ArticlesScreen(
                                 horizontal = 20.dp,
                                 vertical = 24.dp
                             )
+                        )
+                    }
+                }
+
+                if (state.authors.isNotEmpty()) {
+                    item(key = "authors") {
+                        AuthorsSection(
+                            authors = state.authors,
+                            modifier = Modifier.padding(top = 32.dp)
                         )
                     }
                 }
