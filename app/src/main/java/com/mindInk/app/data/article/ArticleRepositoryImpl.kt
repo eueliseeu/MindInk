@@ -1,0 +1,171 @@
+package com.mindInk.app.data.article
+
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
+import com.mindInk.app.domain.model.Article
+import com.mindInk.app.domain.repository.ArticleRepository
+import com.mindInk.app.domain.repository.CreateArticleResult
+import com.mindInk.app.domain.repository.DeleteArticleResult
+import com.mindInk.app.domain.repository.ObserveArticlesResult
+import com.mindInk.app.domain.repository.ToggleStarResult
+import com.mindInk.app.domain.repository.UpdateArticleResult
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
+
+private const val COLLECTION = "articles"
+
+@Singleton
+class ArticleRepositoryImpl @Inject constructor(
+    private val firestore: FirebaseFirestore
+) : ArticleRepository {
+
+    private val articles = firestore.collection(COLLECTION)
+
+    override fun observeArticles(limit: Long): Flow<ObserveArticlesResult> = callbackFlow {
+        val registration = articles
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(limit)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(ObserveArticlesResult.Error(error.message ?: "Falha ao carregar artigos."))
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents
+                    ?.mapNotNull { it.toArticle() }
+                    .orEmpty()
+                trySend(ObserveArticlesResult.Success(list))
+            }
+        awaitClose { registration.remove() }
+    }
+
+    override suspend fun getArticleById(articleId: String): Article? {
+        return try {
+            articles.document(articleId).get().await().toArticle()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    override suspend fun createArticle(
+        authorUid: String,
+        authorName: String,
+        authorUsername: String,
+        authorPhotoUrl: String?,
+        category: String,
+        title: String,
+        subtitle: String,
+        content: String,
+        linkUrl: String
+    ): CreateArticleResult {
+        return try {
+            val now = System.currentTimeMillis()
+            val ref = articles.document()
+            val dto = ArticleDto(
+                authorUid = authorUid,
+                authorName = authorName,
+                authorUsername = authorUsername,
+                authorPhotoUrl = authorPhotoUrl,
+                category = category,
+                title = title,
+                subtitle = subtitle,
+                content = content,
+                linkUrl = linkUrl,
+                starredBy = emptyList(),
+                starCount = 0,
+                createdAt = now,
+                updatedAt = now
+            )
+            ref.set(dto).await()
+            CreateArticleResult.Success(ref.id)
+        } catch (e: Exception) {
+            CreateArticleResult.Error(e.message ?: "Não foi possível publicar o artigo.")
+        }
+    }
+
+    override suspend fun updateArticle(
+        articleId: String,
+        authorUid: String,
+        category: String,
+        title: String,
+        subtitle: String,
+        content: String,
+        linkUrl: String
+    ): UpdateArticleResult {
+        return try {
+            val ref = articles.document(articleId)
+            val existing = ref.get().await().toArticle()
+                ?: return UpdateArticleResult.Error("Artigo não encontrado.")
+            if (existing.authorUid != authorUid) {
+                return UpdateArticleResult.Error("Sem permissão para editar este artigo.")
+            }
+            ref.set(
+                mapOf(
+                    "category" to category,
+                    "title" to title,
+                    "subtitle" to subtitle,
+                    "content" to content,
+                    "linkUrl" to linkUrl,
+                    "updatedAt" to System.currentTimeMillis()
+                ),
+                SetOptions.merge()
+            ).await()
+            UpdateArticleResult.Success
+        } catch (e: Exception) {
+            UpdateArticleResult.Error(e.message ?: "Não foi possível atualizar o artigo.")
+        }
+    }
+
+    override suspend fun deleteArticle(
+        articleId: String,
+        requesterUid: String
+    ): DeleteArticleResult {
+        return try {
+            val ref = articles.document(articleId)
+            val existing = ref.get().await().toArticle()
+                ?: return DeleteArticleResult.Error("Artigo não encontrado.")
+            if (existing.authorUid != requesterUid) {
+                return DeleteArticleResult.Error("Sem permissão para apagar este artigo.")
+            }
+            ref.delete().await()
+            DeleteArticleResult.Success
+        } catch (e: Exception) {
+            DeleteArticleResult.Error(e.message ?: "Não foi possível apagar o artigo.")
+        }
+    }
+
+    override suspend fun toggleStar(
+        articleId: String,
+        uid: String
+    ): ToggleStarResult {
+        return try {
+            firestore.runTransaction { transaction ->
+                val ref = articles.document(articleId)
+                val snap = transaction.get(ref)
+                val starredBy = (snap.get("starredBy") as? List<*>)
+                    ?.filterIsInstance<String>()
+                    ?.toMutableList()
+                    ?: mutableListOf()
+                if (starredBy.contains(uid)) {
+                    starredBy.remove(uid)
+                } else {
+                    starredBy.add(uid)
+                }
+                transaction.update(
+                    ref,
+                    mapOf(
+                        "starredBy" to starredBy,
+                        "starCount" to starredBy.size
+                    )
+                )
+            }.await()
+            ToggleStarResult.Success
+        } catch (e: Exception) {
+            ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a estrela.")
+        }
+    }
+}

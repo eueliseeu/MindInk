@@ -21,7 +21,7 @@
     <string name="topbar_open_menu">Abrir menu do usuário</string>
     <string name="topbar_sign_out">Sair</string>
 
-    <string name="screen_articles">MindInk.</string>
+    <string name="screen_articles">/ MindInk.</string>
 
     <string name="articles_latest_title">Últimos Artigos</string>
     <string name="articles_add">Criar artigo</string>
