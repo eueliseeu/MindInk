@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -115,8 +115,8 @@ fun ArticleCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             Icon(
-                imageVector = Icons.Rounded.Star,
-                contentDescription = stringResource(R.string.article_stars),
+                imageVector = Icons.Rounded.Favorite,
+                contentDescription = stringResource(R.string.article_likes),
                 tint = MindInkWhite,
                 modifier = Modifier.size(18.dp)
             )

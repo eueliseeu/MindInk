@@ -1,5 +1,6 @@
 package com.mindInk.app.ui.articles.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -14,10 +15,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.components.UserAvatar
+import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private val HorizontalPadding = 20.dp
@@ -26,6 +29,7 @@ private val AvatarSize = 64.dp
 @Composable
 fun AuthorsSection(
     authors: List<AuthorUi>,
+    onAuthorClick: (AuthorUi) -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     if (authors.isEmpty()) return
@@ -39,7 +43,7 @@ fun AuthorsSection(
             modifier = Modifier.padding(horizontal = HorizontalPadding)
         )
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
         LazyRow(
             contentPadding = PaddingValues(horizontal = HorizontalPadding),
@@ -52,7 +56,9 @@ fun AuthorsSection(
             ) { author ->
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.padding(vertical = 4.dp)
+                    modifier = Modifier
+                        .padding(vertical = 4.dp)
+                        .clickable { onAuthorClick(author) }
                 ) {
                     UserAvatar(
                         photoUrl = author.photoUrl,

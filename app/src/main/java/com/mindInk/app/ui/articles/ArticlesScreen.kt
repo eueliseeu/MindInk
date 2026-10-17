@@ -28,6 +28,7 @@ import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.articles.components.AuthorsSection
 import com.mindInk.app.ui.articles.components.LatestArticlesSection
 import com.mindInk.app.ui.articles.model.ArticleCardUi
+import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
@@ -39,6 +40,7 @@ fun ArticlesScreen(
     onSearchClick: () -> Unit = {},
     onAddArticleClick: () -> Unit = {},
     onArticleClick: (ArticleCardUi) -> Unit = {},
+    onAuthorClick: (AuthorUi) -> Unit = {},
     viewModel: ArticlesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -103,6 +105,7 @@ fun ArticlesScreen(
                     item(key = "authors") {
                         AuthorsSection(
                             authors = state.authors,
+                            onAuthorClick = onAuthorClick,
                             modifier = Modifier.padding(top = 32.dp)
                         )
                     }
