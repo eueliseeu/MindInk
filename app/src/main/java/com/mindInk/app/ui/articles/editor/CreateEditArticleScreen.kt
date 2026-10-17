@@ -402,7 +402,7 @@ private fun MarkdownToolbar(
         ToolbarIcon(Icons.Rounded.FormatListBulleted, "Lista", onBullet)
         ToolbarIcon(Icons.Rounded.Link, "Link", onLink)
         ToolbarIcon(Icons.Rounded.Code, "Código", onCode)
-        ToolbarIcon(Icons.Rounded.Image, "Imagem", onImage)
+        // ToolbarIcon(Icons.Rounded.Image, "Imagem", onImage)
     }
 }
 
