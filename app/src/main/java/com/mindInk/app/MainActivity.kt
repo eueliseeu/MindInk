@@ -19,6 +19,7 @@ import androidx.compose.ui.platform.LocalResources
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.ui.articles.ArticlesScreen
+import com.mindInk.app.ui.articles.detail.ArticleDetailScreen
 import com.mindInk.app.ui.articles.editor.CreateEditArticleScreen
 import com.mindInk.app.ui.auth.AuthViewModel
 import com.mindInk.app.ui.auth.LinkAccountDialog
@@ -46,6 +47,7 @@ class MainActivity : ComponentActivity() {
                 val uiState by viewModel.uiState.collectAsState()
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
+                var selectedArticleId by rememberSaveable { mutableStateOf<String?>(null) }
                 var toast by remember { mutableStateOf<ToastMessage?>(null) }
 
                 LaunchedEffect(viewModel) {
@@ -63,26 +65,44 @@ class MainActivity : ComponentActivity() {
                         val current = session
                         when {
                             current is SessionState.Authenticated && !uiState.isLoading -> {
-                                if (showCreateArticle) {
-                                    CreateEditArticleScreen(
-                                        user = current.user,
-                                        onBack = { showCreateArticle = false },
-                                        onSaved = {
-                                            showCreateArticle = false
-                                            toast = ToastMessage("Artigo pronto (salvamento no Firestore no próximo passo).")
-                                        }
-                                    )
-                                } else {
-                                    ArticlesScreen(
-                                        user = current.user,
-                                        onSignOut = viewModel::onSignOutClick,
-                                        onAddArticleClick = { showCreateArticle = true }
-                                    )
+                                when {
+                                    selectedArticleId != null -> {
+                                        ArticleDetailScreen(
+                                            articleId = selectedArticleId!!,
+                                            user = current.user,
+                                            onBack = { selectedArticleId = null },
+                                            onSignOut = viewModel::onSignOutClick
+                                        )
+                                    }
+
+                                    showCreateArticle -> {
+                                        CreateEditArticleScreen(
+                                            user = current.user,
+                                            onBack = { showCreateArticle = false },
+                                            onSaved = {
+                                                showCreateArticle = false
+                                                toast = ToastMessage("Artigo publicado.")
+                                            },
+                                            onSignOut = viewModel::onSignOutClick
+                                        )
+                                    }
+
+                                    else -> {
+                                        ArticlesScreen(
+                                            user = current.user,
+                                            onSignOut = viewModel::onSignOutClick,
+                                            onAddArticleClick = { showCreateArticle = true },
+                                            onArticleClick = { card ->
+                                                selectedArticleId = card.id
+                                            }
+                                        )
+                                    }
                                 }
                             }
 
                             else -> {
                                 showCreateArticle = false
+                                selectedArticleId = null
                                 LoginScreen(
                                     loadingProvider = uiState.loadingProvider,
                                     onGoogleClick = { viewModel.onGoogleClick(this@MainActivity) },
