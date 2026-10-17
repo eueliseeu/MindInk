@@ -2,6 +2,7 @@ package com.mindInk.app.ui.articles.editor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.domain.repository.CreateArticleResult
 import com.mindInk.app.domain.repository.UpdateArticleResult
@@ -32,18 +33,16 @@ class CreateEditArticleViewModel @Inject constructor(
 
     fun resetForNewArticle(user: AuthUser) {
         boundUser = user
-        val name = user.displayName?.takeIf { it.isNotBlank() }
-            ?: user.email?.substringBefore("@")
-            ?: "Autor"
-        _uiState.value = CreateEditArticleUiState(authorLabel = name)
+        _uiState.value = CreateEditArticleUiState(
+            authorLabel = formatAuthorName(user.displayName ?: user.email)
+        )
     }
 
     fun bindAuthor(user: AuthUser) {
         boundUser = user
-        val name = user.displayName?.takeIf { it.isNotBlank() }
-            ?: user.email?.substringBefore("@")
-            ?: "Autor"
-        _uiState.update { it.copy(authorLabel = name) }
+        _uiState.update {
+            it.copy(authorLabel = formatAuthorName(user.displayName ?: user.email))
+        }
     }
 
     fun onCategorySelect(category: String) {
@@ -116,9 +115,9 @@ class CreateEditArticleViewModel @Inject constructor(
         }
         if (state.isSaving) return
 
-        val authorName = user.displayName?.takeIf { it.isNotBlank() }
-            ?: user.email?.substringBefore("@")
-            ?: "Autor"
+        val authorName = formatAuthorName(
+            user.displayName ?: user.email?.substringBefore("@")
+        )
         val authorUsername = user.email?.substringBefore("@")
             ?: user.uid.take(8)
 
