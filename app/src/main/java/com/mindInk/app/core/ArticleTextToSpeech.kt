@@ -17,31 +17,29 @@ class ArticleTextToSpeech(
 
     override fun onInit(status: Int) {
         ready = status == TextToSpeech.SUCCESS
-        if (ready) {
-            tts?.language = Locale.forLanguageTag("pt-BR")
-            tts?.setSpeechRate(0.88f)
-            tts?.setPitch(1.0f)
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {
-                    onSpeakingChanged(true)
-                }
+        if (!ready) return
 
-                override fun onDone(utteranceId: String?) {
-                    activeUtterances = (activeUtterances - 1).coerceAtLeast(0)
-                    if (activeUtterances == 0) {
-                        onSpeakingChanged(false)
-                    }
-                }
+        tts?.language = Locale.forLanguageTag("pt-BR")
+        tts?.setSpeechRate(0.88f)
+        tts?.setPitch(1.0f)
+        tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                onSpeakingChanged(true)
+            }
 
-                @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) {
-                    activeUtterances = 0
-                    onSpeakingChanged(false)
-                }
-            })
-            pendingText?.let { speak(it) }
-            pendingText = null
-        }
+            override fun onDone(utteranceId: String?) {
+                activeUtterances = (activeUtterances - 1).coerceAtLeast(0)
+                if (activeUtterances == 0) onSpeakingChanged(false)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String?) {
+                activeUtterances = 0
+                onSpeakingChanged(false)
+            }
+        })
+        pendingText?.let { speak(it) }
+        pendingText = null
     }
 
     fun speak(text: String) {
@@ -51,18 +49,29 @@ class ArticleTextToSpeech(
             return
         }
         stop()
-        val chunks = chunkText(text)
-        activeUtterances = chunks.size
-        chunks.forEachIndexed { index, chunk ->
-            val mode = if (index == 0) {
-                TextToSpeech.QUEUE_FLUSH
-            } else {
-                TextToSpeech.QUEUE_ADD
+
+        val engine = tts ?: return
+        val parts = splitByPunctuation(text)
+        if (parts.isEmpty()) return
+
+        activeUtterances = parts.count { it is SpeechPart.Speak }
+        var first = true
+
+        for (part in parts) {
+            when (part) {
+                is SpeechPart.Speak -> {
+                    val mode = if (first) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+                    first = false
+                    engine.speak(part.text, mode, null, "mindink_speak_${part.text.hashCode()}")
+                }
+                is SpeechPart.Pause -> {
+                    engine.playSilentUtterance(
+                        part.durationMs,
+                        TextToSpeech.QUEUE_ADD,
+                        "mindink_pause_${part.durationMs}"
+                    )
+                }
             }
-            tts?.speak(chunk, mode, null, "mindink_$index")
-        }
-        if (chunks.isEmpty()) {
-            onSpeakingChanged(false)
         }
     }
 
@@ -81,35 +90,31 @@ class ArticleTextToSpeech(
         onSpeakingChanged(false)
     }
 
-    private fun chunkText(text: String): List<String> {
-        val sentences = text
-            .split(Regex("(?<=[.!?])\\s+"))
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
+    private fun splitByPunctuation(text: String): List<SpeechPart> {
+        val result = mutableListOf<SpeechPart>()
+        val matches = Regex("([^.!?,;:]+[.!?,;:]?)").findAll(text.trim())
 
-        if (sentences.isEmpty()) return listOf(text.take(300))
+        for (match in matches) {
+            val raw = match.value.trim()
+            if (raw.isBlank()) continue
 
-        val chunks = mutableListOf<String>()
-        val buffer = StringBuilder()
-
-        for (sentence in sentences) {
-            if (buffer.length + sentence.length > 350) {
-                if (buffer.isNotBlank()) {
-                    chunks.add(buffer.toString().trim())
-                    buffer.clear()
-                }
-                if (sentence.length > 350) {
-                    sentence.chunked(300).forEach { chunks.add(it) }
-                } else {
-                    buffer.append(sentence).append(' ')
-                }
-            } else {
-                buffer.append(sentence).append(' ')
+            val (spoken, pauseMs) = when (raw.last()) {
+                '.', '!', '?' -> raw to 450L
+                ',', ';', ':' -> raw to 220L
+                else -> raw to 80L
             }
+            if (spoken.isNotBlank()) result.add(SpeechPart.Speak(spoken))
+            if (pauseMs > 0) result.add(SpeechPart.Pause(pauseMs))
         }
-        if (buffer.isNotBlank()) {
-            chunks.add(buffer.toString().trim())
+
+        if (result.isEmpty() && text.isNotBlank()) {
+            result.add(SpeechPart.Speak(text.trim()))
         }
-        return chunks
+        return result
+    }
+
+    private sealed class SpeechPart {
+        data class Speak(val text: String) : SpeechPart()
+        data class Pause(val durationMs: Long) : SpeechPart()
     }
 }
