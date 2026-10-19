@@ -1,115 +1,298 @@
-package com.mindInk.app.core
+package com.mindInk.app.ui.articles.detail
 
-import android.content.Context
-import android.speech.tts.TextToSpeech
-import android.speech.tts.UtteranceProgressListener
-import java.util.Locale
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.Stop
+import androidx.compose.material.icons.rounded.VolumeUp
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingActionButton
+import androidx.compose.material3.FloatingActionButtonDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.mikepenz.markdown.m3.Markdown
+import com.mindInk.app.core.ArticleTextToSpeech
+import com.mindInk.app.core.formatAuthorName
+import com.mindInk.app.core.markdownToSpeechText
+import com.mindInk.app.domain.model.AuthUser
+import com.mindInk.app.ui.components.MindInkTopBar
+import com.mindInk.app.ui.components.ToastHost
+import com.mindInk.app.ui.components.ToastMessage
+import com.mindInk.app.ui.theme.MindInkBlack
+import com.mindInk.app.ui.theme.MindInkDim
+import com.mindInk.app.ui.theme.MindInkMuted
+import com.mindInk.app.ui.theme.MindInkStar
+import com.mindInk.app.ui.theme.MindInkWhite
+import kotlinx.coroutines.delay
 
-class ArticleTextToSpeech(
-    context: Context,
-    private val onSpeakingChanged: (Boolean) -> Unit
-) : TextToSpeech.OnInitListener {
+private val ContentHorizontalPadding = 20.dp
 
-    private var tts: TextToSpeech? = TextToSpeech(context.applicationContext, this)
-    private var ready = false
-    private var pendingText: String? = null
-    private var activeUtterances = 0
+@Composable
+fun ArticleDetailScreen(
+    articleId: String,
+    user: AuthUser,
+    onBack: () -> Unit,
+    onSignOut: () -> Unit = {},
+    onProfileClick: (() -> Unit)? = null,
+    viewModel: ArticleDetailViewModel = hiltViewModel()
+) {
+    val state by viewModel.uiState.collectAsState()
+    val article = state.article
+    val context = LocalContext.current
+    var isSpeaking by remember { mutableStateOf(false) }
+    val tts = remember {
+        ArticleTextToSpeech(context) { speaking -> isSpeaking = speaking }
+    }
 
-    override fun onInit(status: Int) {
-        ready = status == TextToSpeech.SUCCESS
-        if (ready) {
-            tts?.language = Locale.forLanguageTag("pt-BR")
-            tts?.setSpeechRate(0.88f)
-            tts?.setPitch(1.0f)
-            tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onStart(utteranceId: String?) {
-                    onSpeakingChanged(true)
-                }
+    DisposableEffect(Unit) {
+        onDispose { tts.shutdown() }
+    }
 
-                override fun onDone(utteranceId: String?) {
-                    activeUtterances = (activeUtterances - 1).coerceAtLeast(0)
-                    if (activeUtterances == 0) {
-                        onSpeakingChanged(false)
+    LaunchedEffect(articleId) {
+        viewModel.setArticleId(articleId)
+    }
+
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) viewModel.load()
+            if (event == Lifecycle.Event.ON_PAUSE) tts.stop()
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(state.toastMessage) {
+        if (state.toastMessage != null) {
+            delay(2500)
+            viewModel.clearToast()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .navigationBarsPadding()
+    ) {
+        Column(modifier = Modifier.fillMaxSize()) {
+            MindInkTopBar(
+                screenTitle = "/ Lendo o Art.",
+                user = user,
+                onBack = {
+                    tts.stop()
+                    onBack()
+                },
+                showSearch = false,
+                showUserMenu = true,
+                onSignOut = onSignOut,
+                onProfileClick = onProfileClick
+            )
+
+            when {
+                state.isLoading -> {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        CircularProgressIndicator(color = MindInkWhite)
                     }
                 }
 
-                @Deprecated("Deprecated in Java")
-                override fun onError(utteranceId: String?) {
-                    activeUtterances = 0
-                    onSpeakingChanged(false)
+                article == null -> {
+                    Text(
+                        text = state.errorMessage ?: "Artigo não encontrado.",
+                        color = MindInkMuted,
+                        modifier = Modifier.padding(
+                            horizontal = ContentHorizontalPadding,
+                            vertical = 20.dp
+                        )
+                    )
                 }
-            })
-            pendingText?.let { speak(it) }
-            pendingText = null
-        }
-    }
 
-    fun speak(text: String) {
-        if (text.isBlank()) return
-        if (!ready) {
-            pendingText = text
-            return
-        }
-        stop()
-        val chunks = chunkText(text)
-        activeUtterances = chunks.size
-        chunks.forEachIndexed { index, chunk ->
-            val mode = if (index == 0) {
-                TextToSpeech.QUEUE_FLUSH
-            } else {
-                TextToSpeech.QUEUE_ADD
+                else -> {
+                    Column(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxWidth()
+                            .verticalScroll(rememberScrollState())
+                            .padding(horizontal = ContentHorizontalPadding)
+                            .padding(bottom = 100.dp)
+                    ) {
+                        Text(
+                            text = "Escritor: ${formatAuthorName(article.authorName)}",
+                            color = MindInkMuted,
+                            fontSize = 13.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = article.title,
+                            color = MindInkWhite,
+                            fontSize = 24.sp,
+                            fontWeight = FontWeight.Bold,
+                            lineHeight = 30.sp,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        if (article.subtitle.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = article.subtitle,
+                                color = MindInkMuted,
+                                fontSize = 15.sp,
+                                lineHeight = 20.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+
+                        if (article.category.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Text(
+                                text = article.category,
+                                color = MindInkDim,
+                                fontSize = 13.sp
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(20.dp))
+
+                        Markdown(
+                            content = article.content,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+
+                        Spacer(modifier = Modifier.height(28.dp))
+
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(
+                                onClick = {
+                                    if (isSpeaking) {
+                                        tts.stop()
+                                    } else {
+                                        tts.speak(
+                                            markdownToSpeechText(
+                                                title = article.title,
+                                                subtitle = article.subtitle,
+                                                content = article.content
+                                            )
+                                        )
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isSpeaking) {
+                                        Icons.Rounded.Stop
+                                    } else {
+                                        Icons.Rounded.VolumeUp
+                                    },
+                                    contentDescription = if (isSpeaking) {
+                                        "Parar leitura"
+                                    } else {
+                                        "Ouvir artigo"
+                                    },
+                                    tint = MindInkWhite,
+                                    modifier = Modifier.size(28.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
-            tts?.speak(chunk, mode, null, "mindink_$index")
         }
-        if (chunks.isEmpty()) {
-            onSpeakingChanged(false)
-        }
-    }
 
-    fun stop() {
-        tts?.stop()
-        activeUtterances = 0
-        onSpeakingChanged(false)
-    }
-
-    fun shutdown() {
-        tts?.stop()
-        tts?.shutdown()
-        tts = null
-        ready = false
-        activeUtterances = 0
-        onSpeakingChanged(false)
-    }
-
-    private fun chunkText(text: String): List<String> {
-        val sentences = text
-            .split(Regex("(?<=[.!?])\\s+"))
-            .map { it.trim() }
-            .filter { it.isNotBlank() }
-
-        if (sentences.isEmpty()) return listOf(text.take(300))
-
-        val chunks = mutableListOf<String>()
-        val buffer = StringBuilder()
-
-        for (sentence in sentences) {
-            if (buffer.length + sentence.length > 350) {
-                if (buffer.isNotBlank()) {
-                    chunks.add(buffer.toString().trim())
-                    buffer.clear()
+        if (article != null) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = ContentHorizontalPadding, bottom = 20.dp)
+            ) {
+                Surface(
+                    color = MindInkBlack,
+                    shape = RoundedCornerShape(20.dp),
+                    modifier = Modifier.widthIn(min = 40.dp)
+                ) {
+                    Text(
+                        text = article.starCount.toString(),
+                        color = MindInkWhite,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                    )
                 }
-                if (sentence.length > 350) {
-                    sentence.chunked(300).forEach { chunks.add(it) }
-                } else {
-                    buffer.append(sentence).append(' ')
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                FloatingActionButton(
+                    onClick = viewModel::onToggleStar,
+                    shape = CircleShape,
+                    containerColor = MindInkBlack,
+                    contentColor = if (state.isStarredByMe) MindInkStar else MindInkWhite,
+                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
+                    modifier = Modifier.size(56.dp)
+                ) {
+                    Icon(
+                        imageVector = if (state.isStarredByMe) {
+                            Icons.Rounded.Star
+                        } else {
+                            Icons.Outlined.Star
+                        },
+                        contentDescription = "Estrela",
+                        tint = if (state.isStarredByMe) MindInkStar else MindInkWhite,
+                        modifier = Modifier.size(26.dp)
+                    )
                 }
-            } else {
-                buffer.append(sentence).append(' ')
             }
         }
-        if (buffer.isNotBlank()) {
-            chunks.add(buffer.toString().trim())
-        }
-        return chunks
+
+        ToastHost(
+            message = state.toastMessage?.let { ToastMessage(it) },
+            onDismiss = viewModel::clearToast
+        )
     }
 }
