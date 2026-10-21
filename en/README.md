@@ -46,7 +46,7 @@ Android app for publishing and reading technology articles. MindInk brings toget
 - **Article creation and editing:** title, subtitle, category, Markdown content, and preview.
 - **Reading:** articles rendered in Markdown.
 - **Star ratings:** the interface highlights the star for the user who rated the article; the count and the list of users are updated in Firestore.
-- **Public author profile:** published articles, total stars, and optional GitHub and Instagram links.
+- **Public author profile:** published articles, total stars, and optional GitHub and LinkedIn links.
 - **Account settings:** edit name and social links. The email, taken from the authentication provider, is read-only.
 - **Name synchronization:** when a new name is saved, the app updates the Firebase profile and syncs `authorName` across the author's articles in paginated batches.
 - **Read aloud:** title, subtitle, and content in Portuguese, with Markdown syntax stripped and a control to start or stop.
@@ -128,7 +128,7 @@ The explore list combines real-time observation with paginated loading.
 
 ### `user_profiles/{uid}`
 
-Optional settings are stored per UID with the fields `name`, `github`, and `instagram`. The email is neither saved in this document nor edited on the screen; it comes from Firebase Authentication. Legacy age and LinkedIn fields are removed when settings are saved.
+Optional settings are stored per UID with the fields `name`, `github`, and `linkedin`. The email is neither saved in this document nor edited on the screen; it comes from Firebase Authentication. Legacy age and Instagram fields are removed when settings are saved.
 
 ### Security
 

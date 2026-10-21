@@ -46,7 +46,7 @@ Aplicativo Android para publicação e leitura de artigos sobre tecnologia. O Mi
 - **Criação e edição de artigos:** título, subtítulo, categoria, conteúdo em Markdown e pré-visualização.
 - **Leitura:** artigos renderizados em Markdown.
 - **Avaliação por estrelas:** a interface destaca a estrela para o usuário que curtiu; a contagem e a lista de usuários são atualizadas no Firestore.
-- **Perfil público de autor:** artigos publicados, total de estrelas e links opcionais para GitHub e Instagram.
+- **Perfil público de autor:** artigos publicados, total de estrelas e links opcionais para GitHub e LinkedIn.
 - **Configurações da conta:** edição de nome e links sociais. O e-mail, obtido do provedor de autenticação, é somente leitura.
 - **Sincronização de nome:** ao salvar um novo nome, o app atualiza o perfil Firebase e sincroniza `authorName` nos artigos do autor em lotes paginados.
 - **Leitura em voz alta:** título, subtítulo e conteúdo em português, com remoção de sintaxe Markdown e controle para iniciar ou parar.
@@ -128,7 +128,7 @@ A lista de exploração combina observação em tempo real com carregamento pagi
 
 ### `user_profiles/{uid}`
 
-As configurações opcionais são armazenadas por UID com os campos `name`, `github` e `instagram`. O e-mail não é salvo nesse documento nem editado pela tela; ele vem do Firebase Authentication. Campos antigos de idade e LinkedIn são removidos quando as configurações são salvas.
+As configurações opcionais são armazenadas por UID com os campos `name`, `github` e `linkedin`. O e-mail não é salvo nesse documento nem editado pela tela; ele vem do Firebase Authentication. Campos antigos de idade e Instagram são removidos quando as configurações são salvas.
 
 ### Segurança
 
