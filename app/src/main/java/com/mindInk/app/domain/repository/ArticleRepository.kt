@@ -13,6 +13,11 @@ sealed interface UpdateArticleResult {
     data class Error(val message: String) : UpdateArticleResult
 }
 
+sealed interface UpdateAuthorArticlesResult {
+    data object Success : UpdateAuthorArticlesResult
+    data class Error(val message: String) : UpdateAuthorArticlesResult
+}
+
 sealed interface DeleteArticleResult {
     data object Success : DeleteArticleResult
     data class Error(val message: String) : DeleteArticleResult
@@ -77,6 +82,11 @@ interface ArticleRepository {
         content: String,
         linkUrl: String
     ): UpdateArticleResult
+
+    suspend fun updateAuthorName(
+        authorUid: String,
+        authorName: String
+    ): UpdateAuthorArticlesResult
 
     suspend fun deleteArticle(
         articleId: String,

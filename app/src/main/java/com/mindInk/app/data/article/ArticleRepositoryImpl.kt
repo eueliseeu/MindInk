@@ -1,6 +1,7 @@
 package com.mindInk.app.data.article
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mindInk.app.domain.model.Article
@@ -12,6 +13,8 @@ import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.repository.UpdateArticleResult
+import com.mindInk.app.domain.repository.UpdateAuthorArticlesResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -20,6 +23,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val COLLECTION = "articles"
+private const val AUTHOR_NAME_BATCH_SIZE = 450L
 
 @Singleton
 class ArticleRepositoryImpl @Inject constructor(
@@ -188,6 +192,37 @@ class ArticleRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             UpdateArticleResult.Error(e.message ?: "Não foi possível atualizar o artigo.")
         }
+    }
+
+    override suspend fun updateAuthorName(
+        authorUid: String,
+        authorName: String
+    ): UpdateAuthorArticlesResult = try {
+        val query = articles
+            .whereEqualTo("authorUid", authorUid)
+            .orderBy(FieldPath.documentId())
+        var page = query.limit(AUTHOR_NAME_BATCH_SIZE).get().await()
+
+        while (!page.isEmpty) {
+            val batch = firestore.batch()
+            page.documents.forEach { document ->
+                batch.update(document.reference, "authorName", authorName)
+            }
+            batch.commit().await()
+            page = query
+                .startAfter(page.documents.last())
+                .limit(AUTHOR_NAME_BATCH_SIZE)
+                .get()
+                .await()
+        }
+
+        UpdateAuthorArticlesResult.Success
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        UpdateAuthorArticlesResult.Error(
+            e.message ?: "Não foi possível atualizar o nome em todos os artigos."
+        )
     }
 
     override suspend fun deleteArticle(
