@@ -76,6 +76,7 @@ fun ArticleDetailScreen(
     onBack: () -> Unit,
     onSignOut: () -> Unit = {},
     onProfileClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     viewModel: ArticleDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -128,7 +129,8 @@ fun ArticleDetailScreen(
                 showSearch = false,
                 showUserMenu = true,
                 onSignOut = onSignOut,
-                onProfileClick = onProfileClick
+                onProfileClick = onProfileClick,
+                onSettingsClick = onSettingsClick
             )
 
             when {

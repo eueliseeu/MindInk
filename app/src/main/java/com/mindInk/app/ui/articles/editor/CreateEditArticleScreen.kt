@@ -79,6 +79,7 @@ fun CreateEditArticleScreen(
     onSaved: () -> Unit,
     onSignOut: () -> Unit = {},
     onProfileClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     viewModel: CreateEditArticleViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -114,7 +115,8 @@ fun CreateEditArticleScreen(
             showSearch = false,
             showUserMenu = true,
             onSignOut = onSignOut,
-            onProfileClick = onProfileClick
+            onProfileClick = onProfileClick,
+            onSettingsClick = onSettingsClick
         )
 
         Column(
