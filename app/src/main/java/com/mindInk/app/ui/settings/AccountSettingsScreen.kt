@@ -159,9 +159,9 @@ fun AccountSettingsScreen(
                     Spacer(modifier = Modifier.height(12.dp))
 
                     AccountField(
-                        value = state.instagram,
-                        onValueChange = viewModel::onInstagramChange,
-                        label = "Instagram"
+                        value = state.linkedin,
+                        onValueChange = viewModel::onLinkedinChange,
+                        label = "LinkedIn"
                     )
 
                     state.errorMessage?.let { message ->

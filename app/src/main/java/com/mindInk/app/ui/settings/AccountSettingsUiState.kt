@@ -5,7 +5,7 @@ data class AccountSettingsUiState(
     val name: String = "",
     val email: String = "",
     val github: String = "",
-    val instagram: String = "",
+    val linkedin: String = "",
     val isLoading: Boolean = true,
     val isSaving: Boolean = false,
     val isDeleting: Boolean = false,

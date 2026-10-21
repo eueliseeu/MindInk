@@ -52,7 +52,7 @@ class AccountSettingsViewModel @Inject constructor(
                             isLoading = false,
                             name = result.settings.name.ifBlank { state.name },
                             github = result.settings.github,
-                            instagram = result.settings.instagram
+                            linkedin = result.settings.linkedin
                         )
                     }
                 }
@@ -73,8 +73,8 @@ class AccountSettingsViewModel @Inject constructor(
         it.copy(github = value, errorMessage = null, successMessage = null)
     }
 
-    fun onInstagramChange(value: String) = _uiState.update {
-        it.copy(instagram = value, errorMessage = null, successMessage = null)
+    fun onLinkedinChange(value: String) = _uiState.update {
+        it.copy(linkedin = value, errorMessage = null, successMessage = null)
     }
 
     fun save() {
@@ -90,7 +90,7 @@ class AccountSettingsViewModel @Inject constructor(
         val settings = AccountSettings(
             name = name,
             github = current.github.trim(),
-            instagram = current.instagram.trim()
+            linkedin = current.linkedin.trim()
         )
 
         viewModelScope.launch {
