@@ -13,7 +13,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -21,17 +21,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.mindInk.app.R
 import com.mindInk.app.ui.articles.formatCount
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.postedAgoText
 import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.theme.MindInkMuted
+import com.mindInk.app.ui.theme.MindInkStar
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private val CardShape = RoundedCornerShape(28.dp)
@@ -115,9 +114,9 @@ fun ArticleCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             Icon(
-                imageVector = Icons.Rounded.Favorite,
-                contentDescription = stringResource(R.string.article_likes),
-                tint = MindInkWhite,
+                imageVector = Icons.Outlined.Star,
+                contentDescription = null,
+                tint = MindInkStar,
                 modifier = Modifier.size(18.dp)
             )
 
