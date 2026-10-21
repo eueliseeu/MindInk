@@ -55,23 +55,23 @@ class ArticlesViewModel @Inject constructor(
                                     photoUrl = article.authorPhotoUrl
                                 )
                             }
+                        val windowFull = all.size >= REALTIME_LIMIT.toInt()
 
                         _uiState.update { state ->
                             val explore = if (!hasLoadedFirstPage) {
                                 hasLoadedFirstPage = true
-                                exploreCursorId = all.lastOrNull()?.id
                                 all
                             } else {
-                                mergeRealtime(state.exploreArticles, all)
+                                mergeRealtime(state.exploreArticles, all, windowFull)
                             }
+                            exploreCursorId = explore.lastOrNull()?.id
 
                             state.copy(
                                 isLoading = false,
                                 latestArticles = latest,
                                 authors = authors,
                                 exploreArticles = explore,
-                                hasMoreExplore = all.size >= REALTIME_LIMIT.toInt() ||
-                                    state.hasMoreExplore,
+                                hasMoreExplore = windowFull || state.hasMoreExplore,
                                 errorMessage = null
                             )
                         }
@@ -136,14 +136,25 @@ class ArticlesViewModel @Inject constructor(
 
     private fun mergeRealtime(
         current: List<ArticleCardUi>,
-        observed: List<ArticleCardUi>
+        observed: List<ArticleCardUi>,
+        windowFull: Boolean
     ): List<ArticleCardUi> {
-        if (observed.isEmpty()) return current
         val observedMap = observed.associateBy { it.id }
+        val oldestObserved = observed.minOfOrNull { it.createdAt }
         val currentIds = current.map { it.id }.toHashSet()
+
+        val kept = current.filter { card ->
+            when {
+                card.id in observedMap -> true
+                !windowFull -> false
+                oldestObserved == null -> true
+                else -> card.createdAt < oldestObserved
+            }
+        }
+        val updated = kept.map { card -> observedMap[card.id] ?: card }
         val brandNew = observed.filter { it.id !in currentIds }
-        val updated = current.map { card -> observedMap[card.id] ?: card }
-        return brandNew + updated
+
+        return (brandNew + updated).sortedByDescending { it.createdAt }
     }
 
     private fun appendUnique(

@@ -86,6 +86,11 @@ fun ArticleDetailScreen(
         onDispose { tts.shutdown() }
     }
 
+    DisposableEffect(viewModel) {
+        viewModel.onScreenVisible(true)
+        onDispose { viewModel.onScreenVisible(false) }
+    }
+
     LaunchedEffect(articleId) {
         viewModel.setArticleId(articleId)
     }

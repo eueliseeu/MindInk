@@ -25,7 +25,6 @@ import androidx.compose.material.icons.rounded.Code
 import androidx.compose.material.icons.rounded.FormatBold
 import androidx.compose.material.icons.rounded.FormatItalic
 import androidx.compose.material.icons.rounded.FormatListBulleted
-import androidx.compose.material.icons.rounded.Image
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Title
 import androidx.compose.material.icons.rounded.Visibility
@@ -61,6 +60,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mikepenz.markdown.m3.Markdown
+import com.mindInk.app.core.MAX_ARTICLE_WORDS
+import com.mindInk.app.core.countWords
 import com.mindInk.app.domain.model.ArticleCategories
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.components.MindInkTopBar
@@ -85,6 +86,7 @@ fun CreateEditArticleScreen(
     val state by viewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
     var categoryExpanded by remember { mutableStateOf(false) }
+    val wordCount = remember(state.content) { countWords(state.content) }
 
     LaunchedEffect(user.uid) {
         if (!state.isEditMode) {
@@ -289,8 +291,7 @@ fun CreateEditArticleScreen(
                             onHeading = viewModel::applyHeading,
                             onBullet = viewModel::applyBullet,
                             onLink = viewModel::applyLink,
-                            onCode = viewModel::applyCode,
-                            onImage = viewModel::applyImage
+                            onCode = viewModel::applyCode
                         )
                         HorizontalDivider(color = MindInkBorder.copy(alpha = 0.5f))
                     }
@@ -343,6 +344,18 @@ fun CreateEditArticleScreen(
                 }
             }
 
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "$wordCount / $MAX_ARTICLE_WORDS palavras",
+                color = if (wordCount >= MAX_ARTICLE_WORDS) MindInkRed else MindInkDim,
+                fontSize = 12.sp,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp),
+                textAlign = androidx.compose.ui.text.style.TextAlign.End
+            )
+
             state.errorMessage?.let { errorMessage ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
@@ -389,8 +402,7 @@ private fun MarkdownToolbar(
     onHeading: () -> Unit,
     onBullet: () -> Unit,
     onLink: () -> Unit,
-    onCode: () -> Unit,
-    onImage: () -> Unit
+    onCode: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -406,7 +418,6 @@ private fun MarkdownToolbar(
         ToolbarIcon(Icons.Rounded.FormatListBulleted, "Lista", onBullet)
         ToolbarIcon(Icons.Rounded.Link, "Link", onLink)
         ToolbarIcon(Icons.Rounded.Code, "Código", onCode)
-        // ToolbarIcon(Icons.Rounded.Image, "Imagem", onImage)
     }
 }
 

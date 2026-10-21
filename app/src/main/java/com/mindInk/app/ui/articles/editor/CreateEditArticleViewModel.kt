@@ -2,6 +2,9 @@ package com.mindInk.app.ui.articles.editor
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mindInk.app.core.MAX_ARTICLE_CHARS
+import com.mindInk.app.core.MAX_ARTICLE_WORDS
+import com.mindInk.app.core.countWords
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.domain.repository.CreateArticleResult
@@ -18,7 +21,7 @@ import javax.inject.Inject
 
 private const val TITLE_MAX = 120
 private const val SUBTITLE_MAX = 200
-private const val CONTENT_MAX = 50_000
+private const val LIMIT_MESSAGE = "Limite de 10.000 palavras atingido."
 
 @HiltViewModel
 class CreateEditArticleViewModel @Inject constructor(
@@ -62,9 +65,11 @@ class CreateEditArticleViewModel @Inject constructor(
     }
 
     fun onContentChange(value: String) {
-        if (value.length <= CONTENT_MAX) {
-            _uiState.update { it.copy(content = value, errorMessage = null) }
+        if (exceedsLimit(value)) {
+            _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
+            return
         }
+        _uiState.update { it.copy(content = value, errorMessage = null) }
     }
 
     fun togglePreview() {
@@ -74,7 +79,11 @@ class CreateEditArticleViewModel @Inject constructor(
     fun insertMarkdown(snippet: String) {
         val current = _uiState.value.content
         val separator = if (current.isBlank() || current.endsWith("\n")) "" else "\n"
-        val next = (current + separator + snippet).take(CONTENT_MAX)
+        val next = current + separator + snippet
+        if (exceedsLimit(next)) {
+            _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
+            return
+        }
         _uiState.update { it.copy(content = next, isPreview = false, errorMessage = null) }
     }
 
@@ -111,6 +120,10 @@ class CreateEditArticleViewModel @Inject constructor(
         }
         if (state.content.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Escreva o conteúdo em Markdown.") }
+            return
+        }
+        if (exceedsLimit(state.content)) {
+            _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
             return
         }
         if (state.isSaving) return
@@ -175,4 +188,7 @@ class CreateEditArticleViewModel @Inject constructor(
             }
         }
     }
+
+    private fun exceedsLimit(text: String): Boolean =
+        text.length > MAX_ARTICLE_CHARS || countWords(text) > MAX_ARTICLE_WORDS
 }

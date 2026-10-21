@@ -1,5 +1,6 @@
 package com.mindInk.app.ui.articles.detail
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.domain.repository.RecordArticleViewResult
@@ -16,6 +17,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+private const val TAG = "ArticleDetailVM"
+
 @HiltViewModel
 class ArticleDetailViewModel @Inject constructor(
     private val getArticleById: GetArticleByIdUseCase,
@@ -25,7 +28,8 @@ class ArticleDetailViewModel @Inject constructor(
 ) : ViewModel() {
 
     private var articleId: String = ""
-    private var viewRecordedForId: String? = null
+    private var viewRecordedKey: String? = null
+    private var isScreenVisible: Boolean = false
 
     private val _uiState = MutableStateFlow(ArticleDetailUiState())
     val uiState: StateFlow<ArticleDetailUiState> = _uiState.asStateFlow()
@@ -39,10 +43,18 @@ class ArticleDetailViewModel @Inject constructor(
         }
     }
 
+    fun onScreenVisible(visible: Boolean) {
+        isScreenVisible = visible
+        if (visible) tryRecordView()
+    }
+
     fun setArticleId(id: String) {
-        if (articleId == id && _uiState.value.article != null) return
+        if (articleId == id && _uiState.value.article != null) {
+            tryRecordView()
+            return
+        }
         articleId = id
-        viewRecordedForId = null
+        viewRecordedKey = null
         load()
     }
 
@@ -63,24 +75,30 @@ class ArticleDetailViewModel @Inject constructor(
     }
 
     private fun tryRecordView() {
+        if (!isScreenVisible) return
         val uid = _uiState.value.currentUid ?: return
         if (articleId.isBlank()) return
-        if (viewRecordedForId == articleId) return
-        if (_uiState.value.article == null) return
+        if (_uiState.value.article?.id != articleId) return
 
-        viewRecordedForId = articleId
+        val key = "$uid:$articleId"
+        if (viewRecordedKey == key) return
+
+        viewRecordedKey = key
+        val targetArticleId = articleId
         viewModelScope.launch {
-            when (val result = recordArticleView(articleId, uid)) {
+            when (val result = recordArticleView(targetArticleId, uid)) {
                 is RecordArticleViewResult.Success -> {
                     _uiState.update { state ->
                         val current = state.article ?: return@update state
+                        if (current.id != targetArticleId) return@update state
                         state.copy(
                             article = current.copy(viewCount = result.viewCount)
                         )
                     }
                 }
                 is RecordArticleViewResult.Error -> {
-                    viewRecordedForId = null
+                    Log.e(TAG, "recordView falhou: ${result.message}")
+                    if (viewRecordedKey == key) viewRecordedKey = null
                 }
             }
         }
