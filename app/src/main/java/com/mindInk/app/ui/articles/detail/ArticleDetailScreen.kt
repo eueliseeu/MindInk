@@ -1,8 +1,10 @@
 package com.mindInk.app.ui.articles.detail
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -15,10 +17,7 @@ import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Star
@@ -26,11 +25,9 @@ import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FloatingActionButton
-import androidx.compose.material3.FloatingActionButtonDefaults
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
@@ -45,7 +42,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -60,7 +56,6 @@ import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
-import com.mindInk.app.ui.theme.MindInkBlack
 import com.mindInk.app.ui.theme.MindInkDim
 import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkStar
@@ -161,7 +156,7 @@ fun ArticleDetailScreen(
                             .fillMaxWidth()
                             .verticalScroll(rememberScrollState())
                             .padding(horizontal = ContentHorizontalPadding)
-                            .padding(bottom = 100.dp)
+                            .padding(bottom = 24.dp)
                     ) {
                         Text(
                             text = "Escritor: ${formatAuthorName(article.authorName)}",
@@ -204,98 +199,99 @@ fun ArticleDetailScreen(
 
                         Markdown(
                             content = article.content,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .combinedClickable(
+                                    interactionSource = remember(article.id) {
+                                        MutableInteractionSource()
+                                    },
+                                    indication = null,
+                                    onClick = {},
+                                    onDoubleClick = viewModel::onToggleStar
+                                )
                         )
 
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Row(
-                            modifier = Modifier
-                                .heightIn(min = 40.dp)
-                                .clickable(
-                                    interactionSource = remember { MutableInteractionSource() },
-                                    indication = null,
-                                    role = Role.Button
-                                ) {
-                                    if (isSpeaking) {
-                                        tts.stop()
-                                    } else {
-                                        tts.speak(
-                                            markdownToSpeechText(
-                                                title = article.title,
-                                                subtitle = article.subtitle,
-                                                content = article.content
-                                            )
-                                        )
-                                    }
-                                }
-                                .padding(horizontal = 4.dp),
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (isSpeaking) {
-                                    Icons.Rounded.Stop
-                                } else {
-                                    Icons.Rounded.VolumeUp
-                                },
-                                contentDescription = null,
-                                tint = MindInkWhite,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = if (isSpeaking) "Parar leitura" else "Ouvir artigo",
-                                color = MindInkWhite,
-                                fontSize = 13.sp
-                            )
+                            Row(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .heightIn(min = 48.dp)
+                                    .clickable(
+                                        interactionSource = remember {
+                                            MutableInteractionSource()
+                                        },
+                                        indication = null,
+                                        role = Role.Button
+                                    ) {
+                                        if (isSpeaking) {
+                                            tts.stop()
+                                        } else {
+                                            tts.speak(
+                                                markdownToSpeechText(
+                                                    title = article.title,
+                                                    subtitle = article.subtitle,
+                                                    content = article.content
+                                                )
+                                            )
+                                        }
+                                    }
+                                    .padding(horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Icon(
+                                    imageVector = if (isSpeaking) {
+                                        Icons.Rounded.Stop
+                                    } else {
+                                        Icons.Rounded.VolumeUp
+                                    },
+                                    contentDescription = null,
+                                    tint = MindInkWhite,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = if (isSpeaking) "Parar leitura" else "Ouvir artigo",
+                                    color = MindInkWhite,
+                                    fontSize = 13.sp
+                                )
+                            }
+
+                            IconButton(
+                                onClick = viewModel::onToggleStar,
+                                modifier = Modifier.heightIn(min = 48.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = if (state.isStarredByMe) {
+                                            Icons.Rounded.Star
+                                        } else {
+                                            Icons.Outlined.Star
+                                        },
+                                        contentDescription = "Curtir artigo",
+                                        tint = if (state.isStarredByMe) {
+                                            MindInkStar
+                                        } else {
+                                            MindInkWhite
+                                        },
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = article.starCount.toString(),
+                                        color = MindInkWhite,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
                         }
                     }
-                }
-            }
-        }
-
-        if (article != null) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = ContentHorizontalPadding, bottom = 20.dp)
-            ) {
-                Surface(
-                    color = MindInkBlack,
-                    shape = RoundedCornerShape(20.dp),
-                    modifier = Modifier.widthIn(min = 40.dp)
-                ) {
-                    Text(
-                        text = article.starCount.toString(),
-                        color = MindInkWhite,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                FloatingActionButton(
-                    onClick = viewModel::onToggleStar,
-                    shape = CircleShape,
-                    containerColor = MindInkBlack,
-                    contentColor = if (state.isStarredByMe) MindInkStar else MindInkWhite,
-                    elevation = FloatingActionButtonDefaults.elevation(defaultElevation = 6.dp),
-                    modifier = Modifier.size(56.dp)
-                ) {
-                    Icon(
-                        imageVector = if (state.isStarredByMe) {
-                            Icons.Rounded.Star
-                        } else {
-                            Icons.Outlined.Star
-                        },
-                        contentDescription = "Estrela",
-                        tint = if (state.isStarredByMe) MindInkStar else MindInkWhite,
-                        modifier = Modifier.size(26.dp)
-                    )
                 }
             }
         }
