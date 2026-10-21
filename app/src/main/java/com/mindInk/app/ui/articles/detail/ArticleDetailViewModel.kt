@@ -2,8 +2,10 @@ package com.mindInk.app.ui.articles.detail
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mindInk.app.domain.repository.RecordArticleViewResult
 import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
+import com.mindInk.app.domain.usecase.article.RecordArticleViewUseCase
 import com.mindInk.app.domain.usecase.article.ToggleStarUseCase
 import com.mindInk.app.domain.usecase.auth.ObserveAuthStateUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -18,10 +20,12 @@ import javax.inject.Inject
 class ArticleDetailViewModel @Inject constructor(
     private val getArticleById: GetArticleByIdUseCase,
     private val toggleStarUseCase: ToggleStarUseCase,
+    private val recordArticleView: RecordArticleViewUseCase,
     private val observeAuthState: ObserveAuthStateUseCase
 ) : ViewModel() {
 
     private var articleId: String = ""
+    private var viewRecordedForId: String? = null
 
     private val _uiState = MutableStateFlow(ArticleDetailUiState())
     val uiState: StateFlow<ArticleDetailUiState> = _uiState.asStateFlow()
@@ -30,6 +34,7 @@ class ArticleDetailViewModel @Inject constructor(
         viewModelScope.launch {
             observeAuthState().collect { user ->
                 _uiState.update { it.copy(currentUid = user?.uid) }
+                tryRecordView()
             }
         }
     }
@@ -37,6 +42,7 @@ class ArticleDetailViewModel @Inject constructor(
     fun setArticleId(id: String) {
         if (articleId == id && _uiState.value.article != null) return
         articleId = id
+        viewRecordedForId = null
         load()
     }
 
@@ -51,6 +57,31 @@ class ArticleDetailViewModel @Inject constructor(
                     article = article,
                     errorMessage = if (article == null) "Artigo não encontrado." else null
                 )
+            }
+            tryRecordView()
+        }
+    }
+
+    private fun tryRecordView() {
+        val uid = _uiState.value.currentUid ?: return
+        if (articleId.isBlank()) return
+        if (viewRecordedForId == articleId) return
+        if (_uiState.value.article == null) return
+
+        viewRecordedForId = articleId
+        viewModelScope.launch {
+            when (val result = recordArticleView(articleId, uid)) {
+                is RecordArticleViewResult.Success -> {
+                    _uiState.update { state ->
+                        val current = state.article ?: return@update state
+                        state.copy(
+                            article = current.copy(viewCount = result.viewCount)
+                        )
+                    }
+                }
+                is RecordArticleViewResult.Error -> {
+                    viewRecordedForId = null
+                }
             }
         }
     }
@@ -76,10 +107,18 @@ class ArticleDetailViewModel @Inject constructor(
 
         viewModelScope.launch {
             when (val result = toggleStarUseCase(articleId, uid)) {
-                is ToggleStarResult.Success -> Unit
+                is ToggleStarResult.Success -> {
+                    val refreshed = getArticleById(articleId)
+                    if (refreshed != null) {
+                        _uiState.update { it.copy(article = refreshed) }
+                    }
+                }
                 is ToggleStarResult.Error -> {
                     _uiState.update {
-                        it.copy(article = current, toastMessage = result.message)
+                        it.copy(
+                            article = current,
+                            toastMessage = result.message
+                        )
                     }
                 }
             }

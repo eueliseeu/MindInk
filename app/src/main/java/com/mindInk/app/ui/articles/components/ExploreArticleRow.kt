@@ -4,6 +4,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,6 +57,7 @@ fun ExploreArticleRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.Top
     ) {
+
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -71,7 +74,6 @@ fun ExploreArticleRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f, fill = false)
                 )
-
                 Text(
                     text = postedAgoText(article.createdAt),
                     color = MindInkMuted,
@@ -115,9 +117,7 @@ fun ExploreArticleRow(
                     name = article.authorName,
                     size = 24.dp
                 )
-
                 Spacer(modifier = Modifier.width(8.dp))
-
                 Text(
                     text = article.authorName,
                     color = MindInkMuted,
@@ -126,6 +126,22 @@ fun ExploreArticleRow(
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
+
+                Icon(
+                    imageVector = Icons.Outlined.Visibility,
+                    contentDescription = null,
+                    tint = MindInkMuted,
+                    modifier = Modifier.size(15.dp)
+                )
+                Spacer(modifier = Modifier.width(3.dp))
+                Text(
+                    text = formatCount(article.viewCount),
+                    color = MindInkMuted,
+                    fontSize = 12.sp,
+                    maxLines = 1
+                )
+
+                Spacer(modifier = Modifier.width(10.dp))
 
                 Icon(
                     imageVector = Icons.Outlined.Star,
@@ -137,9 +153,7 @@ fun ExploreArticleRow(
                     },
                     modifier = Modifier.size(16.dp)
                 )
-
                 Spacer(modifier = Modifier.width(4.dp))
-
                 Text(
                     text = formatCount(article.starCount),
                     color = MindInkWhite,

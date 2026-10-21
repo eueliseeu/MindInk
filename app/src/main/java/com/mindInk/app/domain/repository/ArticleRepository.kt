@@ -33,6 +33,11 @@ sealed interface ToggleStarResult {
     data class Error(val message: String) : ToggleStarResult
 }
 
+sealed interface RecordArticleViewResult {
+    data class Success(val viewCount: Int) : RecordArticleViewResult
+    data class Error(val message: String) : RecordArticleViewResult
+}
+
 data class ArticlesPage(
     val articles: List<Article>,
     val nextCursorId: String?,
@@ -97,4 +102,9 @@ interface ArticleRepository {
         articleId: String,
         uid: String
     ): ToggleStarResult
+
+    suspend fun recordView(
+        articleId: String,
+        viewerUid: String
+    ): RecordArticleViewResult
 }

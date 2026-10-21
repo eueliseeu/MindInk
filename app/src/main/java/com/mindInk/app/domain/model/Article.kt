@@ -13,6 +13,7 @@ data class Article(
     val linkUrl: String = "",
     val starredBy: List<String> = emptyList(),
     val starCount: Int = 0,
+    val viewCount: Int = 0,
     val createdAt: Long,
     val updatedAt: Long = 0L
 ) {

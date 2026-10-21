@@ -19,6 +19,7 @@ internal fun DocumentSnapshot.toArticle(): Article? {
         linkUrl = data.linkUrl,
         starredBy = data.starredBy,
         starCount = data.starCount,
+        viewCount = data.viewCount,
         createdAt = data.createdAt,
         updatedAt = data.updatedAt
     )
@@ -36,6 +37,7 @@ internal fun Article.toDto(): ArticleDto = ArticleDto(
     linkUrl = linkUrl,
     starredBy = starredBy,
     starCount = starCount,
+    viewCount = viewCount,
     createdAt = createdAt,
     updatedAt = updatedAt
 )

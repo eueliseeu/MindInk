@@ -8,6 +8,7 @@ data class ArticleCardUi(
     val authorName: String,
     val authorPhotoUrl: String?,
     val starCount: Int,
+    val viewCount: Int,
     val starredBy: List<String>,
     val createdAt: Long
 )

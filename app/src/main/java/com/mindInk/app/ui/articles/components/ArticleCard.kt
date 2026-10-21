@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -55,9 +56,7 @@ fun ArticleCard(
             verticalAlignment = Alignment.CenterVertically
         ) {
             CategoryTag(text = article.category)
-
             Spacer(modifier = Modifier.weight(1f))
-
             Text(
                 text = postedAgoText(article.createdAt),
                 color = MindInkWhite,
@@ -100,9 +99,7 @@ fun ArticleCard(
                 name = article.authorName,
                 size = AuthorAvatarSize
             )
-
             Spacer(modifier = Modifier.width(8.dp))
-
             Text(
                 text = article.authorName,
                 color = MindInkWhite,
@@ -112,7 +109,21 @@ fun ArticleCard(
                 modifier = Modifier.weight(1f)
             )
 
-            Spacer(modifier = Modifier.width(8.dp))
+            Icon(
+                imageVector = Icons.Outlined.Visibility,
+                contentDescription = null,
+                tint = MindInkMuted,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(3.dp))
+            Text(
+                text = formatCount(article.viewCount),
+                color = MindInkMuted,
+                fontSize = 11.sp,
+                maxLines = 1
+            )
+
+            Spacer(modifier = Modifier.width(10.dp))
 
             Icon(
                 imageVector = Icons.Outlined.Star,
@@ -124,9 +135,7 @@ fun ArticleCard(
                 },
                 modifier = Modifier.size(18.dp)
             )
-
             Spacer(modifier = Modifier.width(4.dp))
-
             Text(
                 text = formatCount(article.starCount),
                 color = MindInkWhite,

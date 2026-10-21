@@ -2,6 +2,7 @@ package com.mindInk.app.data.article
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldPath
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mindInk.app.domain.model.Article
@@ -11,6 +12,7 @@ import com.mindInk.app.domain.repository.CreateArticleResult
 import com.mindInk.app.domain.repository.DeleteArticleResult
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
+import com.mindInk.app.domain.repository.RecordArticleViewResult
 import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.repository.UpdateArticleResult
 import com.mindInk.app.domain.repository.UpdateAuthorArticlesResult
@@ -23,6 +25,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private const val COLLECTION = "articles"
+private const val VIEWS_SUBCOLLECTION = "views"
 private const val AUTHOR_NAME_BATCH_SIZE = 450L
 
 @Singleton
@@ -155,6 +158,7 @@ class ArticleRepositoryImpl @Inject constructor(
                 linkUrl = linkUrl,
                 starredBy = emptyList(),
                 starCount = 0,
+                viewCount = 0,
                 createdAt = now,
                 updatedAt = now
             )
@@ -284,5 +288,43 @@ class ArticleRepositoryImpl @Inject constructor(
         } catch (e: Exception) {
             ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a estrela.")
         }
+    }
+
+    override suspend fun recordView(
+        articleId: String,
+        viewerUid: String
+    ): RecordArticleViewResult = try {
+        val articleRef = articles.document(articleId)
+        val viewRef = articleRef.collection(VIEWS_SUBCOLLECTION).document(viewerUid)
+        val viewCount = firestore.runTransaction { transaction ->
+            val articleSnapshot = transaction.get(articleRef)
+            if (!articleSnapshot.exists()) return@runTransaction null
+
+            val viewSnapshot = transaction.get(viewRef)
+            val currentCount = (articleSnapshot.getLong("viewCount") ?: 0L).coerceAtLeast(0L)
+            if (viewSnapshot.exists()) {
+                currentCount
+            } else {
+                transaction.set(
+                    viewRef,
+                    mapOf(
+                        "viewerUid" to viewerUid,
+                        "viewedAt" to FieldValue.serverTimestamp()
+                    )
+                )
+                transaction.update(articleRef, "viewCount", currentCount + 1L)
+                currentCount + 1L
+            }
+        }.await()
+
+        if (viewCount == null) {
+            RecordArticleViewResult.Error("Artigo não encontrado.")
+        } else {
+            RecordArticleViewResult.Success(viewCount.toInt())
+        }
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: Exception) {
+        RecordArticleViewResult.Error(e.message ?: "Não foi possível registrar a visualização.")
     }
 }
