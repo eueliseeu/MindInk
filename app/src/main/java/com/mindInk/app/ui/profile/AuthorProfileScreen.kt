@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.CameraAlt
+import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
@@ -117,7 +117,7 @@ fun AuthorProfileScreen(
                             name = state.authorName,
                             photoUrl = state.authorPhotoUrl,
                             githubUrl = state.githubUrl,
-                            instagramUrl = state.instagramUrl,
+                            linkedinUrl = state.linkedinUrl,
                             totalStars = state.totalStars
                         )
                     }
@@ -169,14 +169,14 @@ private fun ProfileHeader(
     name: String,
     photoUrl: String?,
     githubUrl: String,
-    instagramUrl: String,
+    linkedinUrl: String,
     totalStars: Int
 ) {
     val avatarSize = 128.dp
     val bandY = 88.dp
     val uriHandler = LocalUriHandler.current
     val githubLink = socialLink(githubUrl, "github.com")
-    val instagramLink = socialLink(instagramUrl, "instagram.com")
+    val linkedinLink = socialLink(linkedinUrl, "linkedin.com")
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -251,7 +251,7 @@ private fun ProfileHeader(
                 )
             }
 
-            if (githubLink != null || instagramLink != null) {
+            if (githubLink != null || linkedinLink != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     if (githubLink != null) {
@@ -266,14 +266,14 @@ private fun ProfileHeader(
                             )
                         }
                     }
-                    if (instagramLink != null) {
+                    if (linkedinLink != null) {
                         IconButton(
-                            onClick = { uriHandler.openUri(instagramLink) },
+                            onClick = { uriHandler.openUri(linkedinLink) },
                             modifier = Modifier.size(40.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Outlined.CameraAlt,
-                                contentDescription = "Abrir Instagram",
+                                imageVector = Icons.Rounded.Link,
+                                contentDescription = "Abrir LinkedIn",
                                 tint = MindInkWhite,
                                 modifier = Modifier.size(22.dp)
                             )

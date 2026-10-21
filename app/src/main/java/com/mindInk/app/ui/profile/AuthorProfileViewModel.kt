@@ -46,7 +46,7 @@ class AuthorProfileViewModel @Inject constructor(
                 isLoading = true,
                 authorUid = authorUid,
                 githubUrl = "",
-                instagramUrl = "",
+                linkedinUrl = "",
                 errorMessage = null
             )
         }
@@ -57,7 +57,7 @@ class AuthorProfileViewModel @Inject constructor(
                     _uiState.update { state ->
                         if (state.authorUid != authorUid) state else state.copy(
                             githubUrl = result.settings.github,
-                            instagramUrl = result.settings.instagram
+                            linkedinUrl = result.settings.linkedin
                         )
                     }
                 }
