@@ -1,6 +1,5 @@
 package com.mindInk.app.ui.profile
 
-import android.net.Uri
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -41,6 +40,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
+import com.mindInk.app.core.normalizeSocialProfileUrl
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.formatCount
@@ -175,8 +175,11 @@ private fun ProfileHeader(
     val avatarSize = 128.dp
     val bandY = 88.dp
     val uriHandler = LocalUriHandler.current
-    val githubLink = socialLink(githubUrl, "github.com")
-    val linkedinLink = socialLink(linkedinUrl, "linkedin.com")
+    val githubLink = normalizeSocialProfileUrl(githubUrl, "https://github.com")
+    val linkedinLink = normalizeSocialProfileUrl(
+        linkedinUrl,
+        "https://www.linkedin.com/in"
+    )
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -301,19 +304,4 @@ private fun ProfileHeader(
             }
         }
     }
-}
-
-private fun socialLink(value: String, host: String): String? {
-    val trimmed = value.trim().removePrefix("@")
-    if (trimmed.isBlank()) return null
-
-    val address = when {
-        trimmed.startsWith("https://", ignoreCase = true) ||
-            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
-        trimmed.startsWith(host, ignoreCase = true) ||
-            trimmed.startsWith("www.$host", ignoreCase = true) -> "https://$trimmed"
-        else -> "https://$host/${trimmed.trimStart('/')}"
-    }
-    val uri = Uri.parse(address)
-    return address.takeIf { uri.scheme == "https" || uri.scheme == "http" }
 }
