@@ -28,13 +28,31 @@ sealed interface ToggleStarResult {
     data class Error(val message: String) : ToggleStarResult
 }
 
+data class ArticlesPage(
+    val articles: List<Article>,
+    val nextCursorId: String?,
+    val hasMore: Boolean
+)
+
+sealed interface LoadArticlesPageResult {
+    data class Success(val page: ArticlesPage) : LoadArticlesPageResult
+    data class Error(val message: String) : LoadArticlesPageResult
+}
+
 interface ArticleRepository {
     fun observeArticles(limit: Long = 50): Flow<ObserveArticlesResult>
+
+    fun observeAllArticles(): Flow<ObserveArticlesResult>
 
     fun observeArticlesByAuthor(
         authorUid: String,
         limit: Long = 50
     ): Flow<ObserveArticlesResult>
+
+    suspend fun loadArticlesPage(
+        pageSize: Long = 10,
+        startAfterDocumentId: String? = null
+    ): LoadArticlesPageResult
 
     suspend fun getArticleById(articleId: String): Article?
 
