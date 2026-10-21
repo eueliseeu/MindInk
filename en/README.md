@@ -1,5 +1,7 @@
 # MindInk
 
+[Português](../README.md)
+
 Android app for publishing and reading technology articles. MindInk brings together content on development, artificial intelligence, mobile devices, cloud, and related topics, with social authentication, author profiles, and read-aloud support.
 
 > **Academic project:** A3 for Usability, Web Development, Mobile, and Games.
