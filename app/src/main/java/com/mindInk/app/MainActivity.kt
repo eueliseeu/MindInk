@@ -119,29 +119,33 @@ class MainActivity : ComponentActivity() {
                                     }
 
                                     selectedArticleId != null -> {
-                                        ArticleDetailScreen(
-                                            articleId = selectedArticleId!!,
-                                            user = currentUser,
-                                            onBack = { selectedArticleId = null },
-                                            onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile,
-                                            onSettingsClick = openAccountSettings
-                                        )
+                                        selectedArticleId?.let { articleId ->
+                                            ArticleDetailScreen(
+                                                articleId = articleId,
+                                                user = currentUser,
+                                                onBack = { selectedArticleId = null },
+                                                onSignOut = viewModel::onSignOutClick,
+                                                onProfileClick = openMyProfile,
+                                                onSettingsClick = openAccountSettings
+                                            )
+                                        }
                                     }
 
                                     selectedAuthorUid != null -> {
-                                        AuthorProfileScreen(
-                                            authorUid = selectedAuthorUid!!,
-                                            user = currentUser,
-                                            onBack = { selectedAuthorUid = null },
-                                            onArticleClick = { card ->
-                                                selectedAuthorUid = null
-                                                selectedArticleId = card.id
-                                            },
-                                            onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile,
-                                            onSettingsClick = openAccountSettings
-                                        )
+                                        selectedAuthorUid?.let { authorUid ->
+                                            AuthorProfileScreen(
+                                                authorUid = authorUid,
+                                                user = currentUser,
+                                                onBack = { selectedAuthorUid = null },
+                                                onArticleClick = { card ->
+                                                    selectedAuthorUid = null
+                                                    selectedArticleId = card.id
+                                                },
+                                                onSignOut = viewModel::onSignOutClick,
+                                                onProfileClick = openMyProfile,
+                                                onSettingsClick = openAccountSettings
+                                            )
+                                        }
                                     }
 
                                     showCreateArticle -> {

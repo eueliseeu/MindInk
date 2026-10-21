@@ -343,10 +343,10 @@ fun CreateEditArticleScreen(
                 }
             }
 
-            if (state.errorMessage != null) {
+            state.errorMessage?.let { errorMessage ->
                 Spacer(modifier = Modifier.height(12.dp))
                 Text(
-                    text = state.errorMessage!!,
+                    text = errorMessage,
                     color = Color(0xFFFF6B6B),
                     fontSize = 13.sp
                 )
