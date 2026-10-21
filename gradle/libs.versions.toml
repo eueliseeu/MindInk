@@ -14,8 +14,6 @@ firebaseBom = "34.18.0"
 hilt = "2.60.1"
 ksp = "2.2.10-2.0.2"
 hiltNavigationCompose = "1.2.0"
-navigationCompose = "2.10.0"
-kotlinxSerializationJson = "1.11.0"
 credentials = "1.5.0"
 googleId = "1.1.1"
 uiUnit = "1.12.1"
@@ -45,9 +43,6 @@ hilt-android = { group = "com.google.dagger", name = "hilt-android", version.ref
 hilt-compiler = { group = "com.google.dagger", name = "hilt-android-compiler", version.ref = "hilt" }
 androidx-hilt-navigation-compose = { group = "androidx.hilt", name = "hilt-navigation-compose", version.ref = "hiltNavigationCompose" }
 firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
-androidx-lifecycle-process = { group = "androidx.lifecycle", name = "lifecycle-process", version.ref = "lifecycleRuntimeKtx" }
-androidx-navigation-compose = { group = "androidx.navigation", name = "navigation-compose", version.ref = "navigationCompose" }
-kotlinx-serialization-json = { group = "org.jetbrains.kotlinx", name = "kotlinx-serialization-json", version.ref = "kotlinxSerializationJson" }
 androidx-credentials = { group = "androidx.credentials", name = "credentials", version.ref = "credentials" }
 androidx-credentials-play-services-auth = { group = "androidx.credentials", name = "credentials-play-services-auth", version.ref = "credentials" }
 google-id = { group = "com.google.android.libraries.identity.googleid", name = "googleid", version.ref = "googleId" }
@@ -63,4 +58,3 @@ kotlin-compose = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "ko
 google-services = { id = "com.google.gms.google-services", version.ref = "googleServices" }
 hilt-android = { id = "com.google.dagger.hilt.android", version.ref = "hilt" }
 ksp = { id = "com.google.devtools.ksp", version.ref = "ksp" }
-kotlin-serialization = { id = "org.jetbrains.kotlin.plugin.serialization", version.ref = "kotlin" }
