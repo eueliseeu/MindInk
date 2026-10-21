@@ -27,17 +27,19 @@ Aplicativo Android para publicação e leitura de artigos sobre tecnologia. O Mi
   - [Testes](#testes)
   - [Escopo acadêmico](#escopo-acadêmico)
 
+
 ## Autores
 
-| Nome | RA |
-| --- | --- |
-| Eliseu Pereira da Silva | 124220479 |
-| Maycon Soares De Resende | 125111404445 |
-| Fabricio Rocha Souza Neves | 125111399975 |
-| Gustavo Silva Lourenço | 125111410319 |
-| Gustavo Morais de Oliveira Siqueira | 1242022304 |
-| Bruno Resende Ribeiro | 124220140 |
-| Ana Júlia Brum | 124222016 |
+| Cargo | Nome | RA |
+| --- | --- | --- |
+| Professor/Orientador | Daniel Henrique Matos de Paiva |
+| Aluno | Eliseu Pereira da Silva | 124220479 |
+| Aluno | Maycon Soares De Resende | 125111404445 |
+| Aluno | Fabricio Rocha Souza Neves | 125111399975 |
+| Aluno | Gustavo Silva Lourenço | 125111410319 |
+| Aluno | Gustavo Morais de Oliveira Siqueira | 1242022304 |
+| Aluno | Bruno Resende Ribeiro | 124220140 |
+| Aluna | Ana Júlia Brum | 124222016 |
 
 ## Funcionalidades
 

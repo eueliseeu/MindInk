@@ -29,15 +29,16 @@ Android app for publishing and reading technology articles. MindInk brings toget
 
 ## Authors
 
-| Name | Student ID (RA) |
-| --- | --- |
-| Eliseu Pereira da Silva | 124220479 |
-| Maycon Soares De Resende | 125111404445 |
-| Fabricio Rocha Souza Neves | 125111399975 |
-| Gustavo Silva Lourenço | 125111410319 |
-| Gustavo Morais de Oliveira Siqueira | 1242022304 |
-| Bruno Resende Ribeiro | 124220140 |
-| Ana Júlia Brum | 124222016 |
+| Rule | Name | Student ID (RA) |
+| --- | --- | --- |
+| Teacher/Advisor | Daniel Henrique Matos de Paiva |
+| Student | Eliseu Pereira da Silva | 124220479 |
+| Student | Maycon Soares De Resende | 125111404445 |
+| Student | Fabricio Rocha Souza Neves | 125111399975 |
+| Student | Gustavo Silva Lourenço | 125111410319 |
+| Student | Gustavo Morais de Oliveira Siqueira | 1242022304 |
+| Student | Bruno Resende Ribeiro | 124220140 |
+| Student | Ana Júlia Brum | 124222016 |
 
 ## Features
 
