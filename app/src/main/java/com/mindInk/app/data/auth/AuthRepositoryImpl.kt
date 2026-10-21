@@ -4,13 +4,17 @@ import android.app.Activity
 import com.google.firebase.auth.AuthCredential
 import com.google.firebase.auth.AuthResult
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.FirebaseAuthRecentLoginRequiredException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.OAuthProvider
+import com.google.firebase.auth.UserProfileChangeRequest
+import com.google.firebase.FirebaseNetworkException
 import com.mindInk.app.domain.model.AuthProvider
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.domain.repository.AuthErrorReason
 import com.mindInk.app.domain.repository.AuthRepository
+import com.mindInk.app.domain.repository.DeleteAccountResult
 import com.mindInk.app.domain.repository.SignInResult
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
@@ -88,6 +92,32 @@ internal class AuthRepositoryImpl @Inject constructor(
 
     override fun discardPendingLink() {
         pendingLink = null
+    }
+
+    override suspend fun updateDisplayName(name: String) {
+        val user = firebaseAuth.currentUser
+            ?: throw IllegalStateException("Nenhuma conta autenticada.")
+        val request = UserProfileChangeRequest.Builder()
+            .setDisplayName(name)
+            .build()
+        user.updateProfile(request).awaitTask()
+    }
+
+    override suspend fun deleteAccount(): DeleteAccountResult = try {
+        val user = firebaseAuth.currentUser
+            ?: return DeleteAccountResult.Error("Nenhuma conta autenticada.")
+        user.delete().awaitTask()
+        pendingLink = null
+        googleCredentialProvider.clearState()
+        DeleteAccountResult.Success
+    } catch (e: CancellationException) {
+        throw e
+    } catch (e: FirebaseAuthRecentLoginRequiredException) {
+        DeleteAccountResult.Error("Por segurança, entre novamente com sua conta antes de excluí-la.")
+    } catch (e: FirebaseNetworkException) {
+        DeleteAccountResult.Error("Sem conexão. Verifique sua internet e tente novamente.")
+    } catch (e: Exception) {
+        DeleteAccountResult.Error("Não foi possível excluir sua conta. Tente novamente.")
     }
 
     override suspend fun signOut() {

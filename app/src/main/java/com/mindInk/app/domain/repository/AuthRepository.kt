@@ -24,6 +24,11 @@ sealed interface SignInResult {
     ) : SignInResult
 }
 
+sealed interface DeleteAccountResult {
+    data object Success : DeleteAccountResult
+    data class Error(val message: String) : DeleteAccountResult
+}
+
 interface AuthRepository {
     fun observeAuthState(): Flow<AuthUser?>
 
@@ -34,6 +39,10 @@ interface AuthRepository {
     suspend fun linkPendingAccount(activity: Activity): SignInResult
 
     fun discardPendingLink()
+
+    suspend fun updateDisplayName(name: String)
+
+    suspend fun deleteAccount(): DeleteAccountResult
 
     suspend fun signOut()
 }
