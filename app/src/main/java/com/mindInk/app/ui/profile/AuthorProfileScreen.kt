@@ -1,6 +1,9 @@
 package com.mindInk.app.ui.profile
 
+import android.net.Uri
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -16,10 +19,12 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.CameraAlt
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,11 +33,14 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
+import com.mindInk.app.R
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.formatCount
@@ -52,6 +60,7 @@ fun AuthorProfileScreen(
     onArticleClick: (ArticleCardUi) -> Unit,
     onSignOut: () -> Unit = {},
     onProfileClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     viewModel: AuthorProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -76,7 +85,8 @@ fun AuthorProfileScreen(
             showSearch = false,
             showUserMenu = true,
             onSignOut = onSignOut,
-            onProfileClick = onProfileClick
+            onProfileClick = onProfileClick,
+            onSettingsClick = onSettingsClick
         )
 
         when {
@@ -106,6 +116,8 @@ fun AuthorProfileScreen(
                         ProfileHeader(
                             name = state.authorName,
                             photoUrl = state.authorPhotoUrl,
+                            githubUrl = state.githubUrl,
+                            instagramUrl = state.instagramUrl,
                             totalStars = state.totalStars
                         )
                     }
@@ -156,10 +168,15 @@ fun AuthorProfileScreen(
 private fun ProfileHeader(
     name: String,
     photoUrl: String?,
+    githubUrl: String,
+    instagramUrl: String,
     totalStars: Int
 ) {
     val avatarSize = 128.dp
-    val bandY = 72.dp
+    val bandY = 88.dp
+    val uriHandler = LocalUriHandler.current
+    val githubLink = socialLink(githubUrl, "github.com")
+    val instagramLink = socialLink(instagramUrl, "instagram.com")
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
@@ -234,6 +251,37 @@ private fun ProfileHeader(
                 )
             }
 
+            if (githubLink != null || instagramLink != null) {
+                Spacer(modifier = Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    if (githubLink != null) {
+                        IconButton(
+                            onClick = { uriHandler.openUri(githubLink) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Image(
+                                painter = painterResource(R.drawable.ic_mindink_github),
+                                contentDescription = "Abrir GitHub",
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    if (instagramLink != null) {
+                        IconButton(
+                            onClick = { uriHandler.openUri(instagramLink) },
+                            modifier = Modifier.size(40.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Outlined.CameraAlt,
+                                contentDescription = "Abrir Instagram",
+                                tint = MindInkWhite,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             Spacer(modifier = Modifier.height(8.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -253,4 +301,19 @@ private fun ProfileHeader(
             }
         }
     }
+}
+
+private fun socialLink(value: String, host: String): String? {
+    val trimmed = value.trim().removePrefix("@")
+    if (trimmed.isBlank()) return null
+
+    val address = when {
+        trimmed.startsWith("https://", ignoreCase = true) ||
+            trimmed.startsWith("http://", ignoreCase = true) -> trimmed
+        trimmed.startsWith(host, ignoreCase = true) ||
+            trimmed.startsWith("www.$host", ignoreCase = true) -> "https://$trimmed"
+        else -> "https://$host/${trimmed.trimStart('/')}"
+    }
+    val uri = Uri.parse(address)
+    return address.takeIf { uri.scheme == "https" || uri.scheme == "http" }
 }

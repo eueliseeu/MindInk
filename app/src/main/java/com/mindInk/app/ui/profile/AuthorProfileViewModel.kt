@@ -4,8 +4,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.data.article.toCardUi
+import com.mindInk.app.domain.repository.LoadAccountSettingsResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
+import com.mindInk.app.domain.usecase.settings.LoadAccountSettingsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,13 +19,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthorProfileViewModel @Inject constructor(
-    private val observeArticles: ObserveArticlesUseCase
+    private val observeArticles: ObserveArticlesUseCase,
+    private val loadAccountSettings: LoadAccountSettingsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthorProfileUiState())
     val uiState: StateFlow<AuthorProfileUiState> = _uiState.asStateFlow()
 
     private var observeJob: Job? = null
+    private var settingsJob: Job? = null
     private var currentAuthorUid: String = ""
 
     fun load(authorUid: String) {
@@ -35,13 +39,30 @@ class AuthorProfileViewModel @Inject constructor(
 
         currentAuthorUid = authorUid
         observeJob?.cancel()
+        settingsJob?.cancel()
 
         _uiState.update {
             it.copy(
                 isLoading = true,
                 authorUid = authorUid,
+                githubUrl = "",
+                instagramUrl = "",
                 errorMessage = null
             )
+        }
+
+        settingsJob = viewModelScope.launch {
+            when (val result = loadAccountSettings(authorUid)) {
+                is LoadAccountSettingsResult.Success -> {
+                    _uiState.update { state ->
+                        if (state.authorUid != authorUid) state else state.copy(
+                            githubUrl = result.settings.github,
+                            instagramUrl = result.settings.instagram
+                        )
+                    }
+                }
+                is LoadAccountSettingsResult.Error -> Unit
+            }
         }
 
         observeJob = viewModelScope.launch {
@@ -80,6 +101,7 @@ class AuthorProfileViewModel @Inject constructor(
 
     override fun onCleared() {
         observeJob?.cancel()
+        settingsJob?.cancel()
         super.onCleared()
     }
 }
