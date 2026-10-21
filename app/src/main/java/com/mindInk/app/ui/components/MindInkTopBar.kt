@@ -64,6 +64,7 @@ fun MindInkTopBar(
     onSignOut: () -> Unit = {},
     onBack: (() -> Unit)? = null,
     onProfileClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     showSearch: Boolean = true,
     showUserMenu: Boolean = true,
     modifier: Modifier = Modifier
@@ -189,6 +190,21 @@ fun MindInkTopBar(
                                         .clickable {
                                             menuExpanded = false
                                             onProfileClick()
+                                        }
+                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+                            }
+
+                            if (onSettingsClick != null) {
+                                Text(
+                                    text = "Configurações",
+                                    color = MindInkWhite,
+                                    fontSize = 14.sp,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            menuExpanded = false
+                                            onSettingsClick()
                                         }
                                         .padding(horizontal = 16.dp, vertical = 12.dp)
                                 )

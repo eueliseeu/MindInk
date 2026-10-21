@@ -31,6 +31,7 @@ import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
 import com.mindInk.app.ui.profile.AuthorProfileScreen
 import com.mindInk.app.ui.splash.SplashScreen
+import com.mindInk.app.ui.settings.AccountSettingsScreen
 import com.mindInk.app.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -49,19 +50,24 @@ class MainActivity : ComponentActivity() {
                 val uiState by viewModel.uiState.collectAsState()
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
+                var showAccountSettings by rememberSaveable { mutableStateOf(false) }
+                var profileNameOverride by rememberSaveable { mutableStateOf<String?>(null) }
+                var profileNameOverrideUid by rememberSaveable { mutableStateOf<String?>(null) }
                 var selectedArticleId by rememberSaveable { mutableStateOf<String?>(null) }
                 var selectedAuthorUid by rememberSaveable { mutableStateOf<String?>(null) }
                 var toast by remember { mutableStateOf<ToastMessage?>(null) }
 
                 val canNavigateBack = selectedArticleId != null ||
                     selectedAuthorUid != null ||
-                    showCreateArticle
+                    showCreateArticle ||
+                    showAccountSettings
 
                 BackHandler(enabled = canNavigateBack) {
                     when {
                         selectedArticleId != null -> selectedArticleId = null
                         selectedAuthorUid != null -> selectedAuthorUid = null
                         showCreateArticle -> showCreateArticle = false
+                        showAccountSettings -> showAccountSettings = false
                     }
                 }
 
@@ -80,55 +86,84 @@ class MainActivity : ComponentActivity() {
                         val current = session
                         when {
                             current is SessionState.Authenticated && !uiState.isLoading -> {
+                                val currentUser = current.user.copy(
+                                    displayName = profileNameOverride
+                                        ?.takeIf { profileNameOverrideUid == current.user.uid }
+                                        ?: current.user.displayName
+                                )
                                 val openMyProfile: () -> Unit = {
                                     selectedArticleId = null
                                     showCreateArticle = false
+                                    showAccountSettings = false
                                     selectedAuthorUid = current.user.uid
+                                }
+                                val openAccountSettings: () -> Unit = {
+                                    selectedArticleId = null
+                                    selectedAuthorUid = null
+                                    showCreateArticle = false
+                                    showAccountSettings = true
                                 }
 
                                 when {
+                                    showAccountSettings -> {
+                                        AccountSettingsScreen(
+                                            user = currentUser,
+                                            onBack = { showAccountSettings = false },
+                                            onSignOut = viewModel::onSignOutClick,
+                                            onAccountDeleted = { showAccountSettings = false },
+                                            onProfileUpdated = {
+                                                profileNameOverride = it
+                                                profileNameOverrideUid = current.user.uid
+                                            }
+                                        )
+                                    }
+
                                     selectedArticleId != null -> {
                                         ArticleDetailScreen(
                                             articleId = selectedArticleId!!,
-                                            user = current.user,
+                                            user = currentUser,
                                             onBack = { selectedArticleId = null },
                                             onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile
+                                            onProfileClick = openMyProfile,
+                                            onSettingsClick = openAccountSettings
                                         )
                                     }
 
                                     selectedAuthorUid != null -> {
                                         AuthorProfileScreen(
                                             authorUid = selectedAuthorUid!!,
-                                            user = current.user,
+                                            user = currentUser,
                                             onBack = { selectedAuthorUid = null },
                                             onArticleClick = { card ->
                                                 selectedAuthorUid = null
                                                 selectedArticleId = card.id
                                             },
                                             onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile
+                                            onProfileClick = openMyProfile,
+                                            onSettingsClick = openAccountSettings
                                         )
                                     }
 
                                     showCreateArticle -> {
                                         CreateEditArticleScreen(
-                                            user = current.user,
+                                            user = currentUser,
                                             onBack = { showCreateArticle = false },
                                             onSaved = {
                                                 showCreateArticle = false
                                                 toast = ToastMessage("Artigo publicado.")
                                             },
                                             onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile
+                                            onProfileClick = openMyProfile,
+                                            onSettingsClick = openAccountSettings
                                         )
                                     }
 
                                     else -> {
                                         ArticlesScreen(
-                                            user = current.user,
+                                            user = currentUser,
                                             onSignOut = viewModel::onSignOutClick,
                                             onProfileClick = openMyProfile,
+                                            onSettingsClick = openAccountSettings,
                                             onAddArticleClick = { showCreateArticle = true },
                                             onArticleClick = { card ->
                                                 selectedArticleId = card.id
@@ -143,6 +178,7 @@ class MainActivity : ComponentActivity() {
 
                             else -> {
                                 showCreateArticle = false
+                                showAccountSettings = false
                                 selectedArticleId = null
                                 selectedAuthorUid = null
                                 LoginScreen(

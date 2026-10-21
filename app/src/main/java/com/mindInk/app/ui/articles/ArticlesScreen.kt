@@ -45,6 +45,7 @@ fun ArticlesScreen(
     user: AuthUser,
     onSignOut: () -> Unit,
     onProfileClick: (() -> Unit)? = null,
+    onSettingsClick: (() -> Unit)? = null,
     onSearchClick: () -> Unit = {},
     onAddArticleClick: () -> Unit = {},
     onArticleClick: (ArticleCardUi) -> Unit = {},
@@ -81,7 +82,8 @@ fun ArticlesScreen(
             user = user,
             onSearchClick = onSearchClick,
             onSignOut = onSignOut,
-            onProfileClick = onProfileClick
+            onProfileClick = onProfileClick,
+            onSettingsClick = onSettingsClick
         )
 
         if (state.isLoading && state.latestArticles.isEmpty() && state.exploreArticles.isEmpty()) {
