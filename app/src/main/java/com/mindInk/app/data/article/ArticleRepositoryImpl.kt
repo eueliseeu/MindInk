@@ -5,8 +5,10 @@ import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.ArticleRepository
+import com.mindInk.app.domain.repository.ArticlesPage
 import com.mindInk.app.domain.repository.CreateArticleResult
 import com.mindInk.app.domain.repository.DeleteArticleResult
+import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.repository.UpdateArticleResult
@@ -26,24 +28,29 @@ class ArticleRepositoryImpl @Inject constructor(
 
     private val articles = firestore.collection(COLLECTION)
 
-    override fun observeArticles(limit: Long): Flow<ObserveArticlesResult> = callbackFlow {
-        val registration = articles
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(limit)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(
-                        ObserveArticlesResult.Error(
-                            error.message ?: "Falha ao carregar artigos."
-                        )
+    override fun observeArticles(limit: Long): Flow<ObserveArticlesResult> =
+        observeArticlesQuery(
+            articles.orderBy("createdAt", Query.Direction.DESCENDING).limit(limit)
+        )
+
+    override fun observeAllArticles(): Flow<ObserveArticlesResult> =
+        observeArticlesQuery(articles.orderBy("createdAt", Query.Direction.DESCENDING))
+
+    private fun observeArticlesQuery(query: Query): Flow<ObserveArticlesResult> = callbackFlow {
+        val registration = query.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(
+                    ObserveArticlesResult.Error(
+                        error.message ?: "Falha ao carregar artigos."
                     )
-                    return@addSnapshotListener
-                }
-                val list = snapshot?.documents
-                    ?.mapNotNull { it.toArticle() }
-                    .orEmpty()
-                trySend(ObserveArticlesResult.Success(list))
+                )
+                return@addSnapshotListener
             }
+            val list = snapshot?.documents
+                ?.mapNotNull { it.toArticle() }
+                .orEmpty()
+            trySend(ObserveArticlesResult.Success(list))
+        }
         awaitClose { registration.remove() }
     }
 
@@ -70,6 +77,40 @@ class ArticleRepositoryImpl @Inject constructor(
                 trySend(ObserveArticlesResult.Success(list))
             }
         awaitClose { registration.remove() }
+    }
+
+    override suspend fun loadArticlesPage(
+        pageSize: Long,
+        startAfterDocumentId: String?
+    ): LoadArticlesPageResult {
+        return try {
+            var query: Query = articles
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(pageSize)
+
+            if (!startAfterDocumentId.isNullOrBlank()) {
+                val cursorSnap = articles.document(startAfterDocumentId).get().await()
+                if (cursorSnap.exists()) {
+                    query = query.startAfter(cursorSnap)
+                }
+            }
+
+            val snapshot = query.get().await()
+            val list = snapshot.documents.mapNotNull { it.toArticle() }
+            val lastId = snapshot.documents.lastOrNull()?.id
+
+            LoadArticlesPageResult.Success(
+                ArticlesPage(
+                    articles = list,
+                    nextCursorId = lastId,
+                    hasMore = snapshot.documents.size >= pageSize.toInt()
+                )
+            )
+        } catch (e: Exception) {
+            LoadArticlesPageResult.Error(
+                e.message ?: "Falha ao carregar mais artigos."
+            )
+        }
     }
 
     override suspend fun getArticleById(articleId: String): Article? {
@@ -194,7 +235,7 @@ class ArticleRepositoryImpl @Inject constructor(
             }.await()
             ToggleStarResult.Success
         } catch (e: Exception) {
-            ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a curtida.")
+            ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a estrela.")
         }
     }
 }
