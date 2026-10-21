@@ -36,9 +36,9 @@ internal class AccountSettingsRepositoryImpl @Inject constructor(
             mapOf(
                 "name" to settings.name,
                 "github" to settings.github,
-                "instagram" to settings.instagram,
+                "linkedin" to settings.linkedin,
                 "age" to FieldValue.delete(),
-                "linkedin" to FieldValue.delete()
+                "instagram" to FieldValue.delete()
             ),
             SetOptions.merge()
         ).await()

@@ -5,11 +5,11 @@ import com.mindInk.app.domain.model.AccountSettings
 data class AccountSettingsDto(
     val name: String = "",
     val github: String = "",
-    val instagram: String = ""
+    val linkedin: String = ""
 ) {
     fun toModel() = AccountSettings(
         name = name,
         github = github,
-        instagram = instagram
+        linkedin = linkedin
     )
 }
