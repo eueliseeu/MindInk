@@ -3,11 +3,11 @@ package com.mindInk.app.ui.profile
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
-import com.mindInk.app.data.article.toCardUi
 import com.mindInk.app.domain.repository.LoadAccountSettingsResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
 import com.mindInk.app.domain.usecase.settings.LoadAccountSettingsUseCase
+import com.mindInk.app.ui.articles.mapper.toCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
