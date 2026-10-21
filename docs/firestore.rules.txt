@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    match /articles/{articleId} {
+      allow read: if true;
+      allow create: if request.auth != null
+        && request.resource.data.authorUid == request.auth.uid
+        && request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.content is string
+        && request.resource.data.content.size() > 0;
+      allow update: if request.auth != null
+        && resource.data.authorUid == request.auth.uid;
+      allow update: if request.auth != null
+        && request.resource.data.diff(resource.data).affectedKeys()
+            .hasOnly(['starredBy', 'starCount']);
+      allow delete: if request.auth != null
+        && resource.data.authorUid == request.auth.uid;
+    }
+
+    match /user_profiles/{userId} {
+      allow read: if request.auth != null
+        && request.auth.uid == userId;
+      allow create, update: if request.auth != null
+        && request.auth.uid == userId
+        && request.resource.data.keys().hasAll(['name', 'github', 'linkedin'])
+        && request.resource.data.keys().hasOnly(['name', 'github', 'linkedin'])
+        && request.resource.data.name is string
+        && request.resource.data.name.size() > 0
+        && request.resource.data.name.size() <= 100
+        && request.resource.data.github is string
+        && request.resource.data.github.size() <= 300
+        && request.resource.data.linkedin is string
+        && request.resource.data.linkedin.size() <= 300;
+      allow delete: if request.auth != null
+        && request.auth.uid == userId;
+    }
+  }
+}

@@ -132,11 +132,13 @@ As configurações opcionais são armazenadas por UID com os campos `name`, `git
 
 ### Segurança
 
-As regras do Firestore não estão versionadas neste repositório. Configure-as no Firebase Console para que:
+O arquivo `docs/firestore.rules.txt` contém a versão de referência das regras usadas pelo app. Publique-as no Firebase Console; o arquivo não é aplicado automaticamente pelo Gradle. Elas permitem:
 
-- um usuário autenticado só possa ler e gravar o documento `user_profiles` cujo ID seja o próprio UID;
-- as escritas em `articles` fiquem restritas ao autor autenticado, com as exceções necessárias para as estrelas;
-- a política de leitura dos artigos (pública ou exigindo autenticação) seja definida de acordo com o projeto.
+- que cada usuário autenticado leia e grave apenas `user_profiles/{uid}` com o próprio UID;
+- leitura pública de artigos e escrita de conteúdo restrita ao autor autenticado;
+- atualizações nos campos de estrelas por usuários autenticados.
+
+> **Atenção:** a regra atual de estrelas limita os campos alterados, mas não verifica se a alteração em `starredBy` corresponde apenas ao UID de quem está autenticado. Antes de usar em produção, restrinja essa validação para impedir manipulação de avaliações de outros usuários.
 
 > **Exclusão de conta:** a operação atual exclui a identidade do Firebase Authentication. Ela não remove automaticamente o documento `user_profiles/{uid}` nem os artigos já publicados. Para apagar esses dados também, implemente a limpeza em um backend confiável, como uma Cloud Function acionada pela exclusão da conta. Não conceda ao cliente permissões amplas de exclusão.
 

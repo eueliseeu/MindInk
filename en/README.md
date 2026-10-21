@@ -132,11 +132,13 @@ Optional settings are stored per UID with the fields `name`, `github`, and `link
 
 ### Security
 
-Firestore rules are not versioned in this repository. Configure them in the Firebase Console so that:
+`docs/firestore.rules.txt` contains the reference rules used by the app. Publish them in the Firebase Console; Gradle does not apply this file automatically. They allow:
 
-- an authenticated user can only read and write the `user_profiles` document whose ID matches their own UID;
-- writes to `articles` are restricted to the authenticated author, with the exceptions needed for stars;
-- the article read policy (public or requiring authentication) is defined according to the project's needs.
+- each authenticated user to read and write only `user_profiles/{uid}` matching their own UID;
+- public article reads and article content writes restricted to the authenticated author;
+- authenticated users to update article star fields.
+
+> **Caution:** the current star rule limits which fields may change, but does not verify that `starredBy` changes only for the authenticated user's UID. Tighten this validation before production to prevent users from manipulating other users' ratings.
 
 > **Account deletion:** the current operation deletes the Firebase Authentication identity. It does not automatically remove the `user_profiles/{uid}` document or already published articles. To erase that data as well, implement the cleanup in a trusted backend, such as a Cloud Function triggered by account deletion. Do not grant the client broad delete permissions.
 
