@@ -24,7 +24,7 @@ import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private val HorizontalPadding = 20.dp
-private val AvatarSize = 64.dp
+private val AvatarSize = 48.dp
 
 @Composable
 fun AuthorsSection(
