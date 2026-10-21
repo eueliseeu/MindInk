@@ -11,27 +11,34 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.articles.components.AuthorsSection
+import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.components.LatestArticlesSection
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
+import kotlinx.coroutines.flow.distinctUntilChanged
 
 @Composable
 fun ArticlesScreen(
@@ -45,8 +52,24 @@ fun ArticlesScreen(
     viewModel: ArticlesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val listState = rememberLazyListState()
     val navigationBarPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    LaunchedEffect(listState, state.hasMoreExplore, state.isLoadingMore) {
+        snapshotFlow {
+            val info = listState.layoutInfo
+            val total = info.totalItemsCount
+            val lastVisible = info.visibleItemsInfo.lastOrNull()?.index ?: 0
+            total > 0 && lastVisible >= total - 3
+        }
+            .distinctUntilChanged()
+            .collect { nearEnd ->
+                if (nearEnd && state.hasMoreExplore && !state.isLoadingMore) {
+                    viewModel.loadMoreExplore()
+                }
+            }
+    }
 
     Column(
         modifier = Modifier
@@ -61,7 +84,7 @@ fun ArticlesScreen(
             onProfileClick = onProfileClick
         )
 
-        if (state.isLoading) {
+        if (state.isLoading && state.latestArticles.isEmpty() && state.exploreArticles.isEmpty()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -72,6 +95,7 @@ fun ArticlesScreen(
             }
         } else {
             LazyColumn(
+                state = listState,
                 modifier = Modifier
                     .weight(1f)
                     .fillMaxWidth(),
@@ -82,14 +106,14 @@ fun ArticlesScreen(
             ) {
                 item(key = "latest_articles") {
                     LatestArticlesSection(
-                        articles = state.articles,
+                        articles = state.latestArticles,
                         onArticleClick = onArticleClick,
                         onAddClick = onAddArticleClick
                     )
                 }
 
-                if (state.articles.isEmpty()) {
-                    item(key = "empty_articles") {
+                if (state.latestArticles.isEmpty()) {
+                    item(key = "empty_latest") {
                         Text(
                             text = state.errorMessage
                                 ?: "Nenhum artigo ainda. Toque em + para publicar.",
@@ -109,6 +133,63 @@ fun ArticlesScreen(
                             authors = state.authors,
                             onAuthorClick = onAuthorClick,
                             modifier = Modifier.padding(top = 32.dp)
+                        )
+                    }
+                }
+
+                if (state.exploreArticles.isNotEmpty()) {
+                    item(key = "explore_title") {
+                        Text(
+                            text = "Descubra Mais Artigos",
+                            color = MindInkWhite,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(
+                                start = 20.dp,
+                                end = 20.dp,
+                                top = 32.dp,
+                                bottom = 16.dp
+                            )
+                        )
+                    }
+
+                    items(
+                        items = state.exploreArticles,
+                        key = { "explore_${it.id}" }
+                    ) { article ->
+                        ExploreArticleRow(
+                            article = article,
+                            onClick = { onArticleClick(article) }
+                        )
+                    }
+                }
+
+                if (state.isLoadingMore) {
+                    item(key = "explore_loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = MindInkWhite,
+                                modifier = Modifier.padding(8.dp)
+                            )
+                        }
+                    }
+                }
+
+                if (!state.hasMoreExplore && state.exploreArticles.isNotEmpty()) {
+                    item(key = "explore_end") {
+                        Text(
+                            text = "Você viu todos os artigos.",
+                            color = MindInkMuted,
+                            fontSize = 13.sp,
+                            modifier = Modifier.padding(
+                                horizontal = 20.dp,
+                                vertical = 16.dp
+                            )
                         )
                     }
                 }
