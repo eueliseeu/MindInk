@@ -7,26 +7,31 @@ fun normalizeSocialProfileUrl(value: String, baseUrl: String): String? {
     val base = baseUrl.trim().trimEnd('/')
     if (input.isBlank() || base.isBlank()) return null
 
-    val baseUri = parseUri(if (base.hasHttpScheme()) base else "https://$base") ?: return null
-    val baseHost = baseUri.host?.removePrefix("www.") ?: return null
-    val inputHasScheme = input.hasHttpScheme()
+    val baseWithScheme = if (base.hasHttpScheme()) base else "https://$base"
+    val baseHost = parseUri(baseWithScheme)?.normalizedHost() ?: return null
+
     val inputHost = input.substringBefore('/').lowercase()
     val address = when {
-        inputHasScheme -> input
+        input.hasHttpScheme() -> input
         inputHost == baseHost || inputHost == "www.$baseHost" -> "https://$input"
-        else -> "$base/${input.trimStart('/')}"
+        else -> "$baseWithScheme/${input.trimStart('/')}"
     }
-    val uri = parseUri(address) ?: return null
-    val uriHost = uri.host?.removePrefix("www.") ?: return null
 
-    if (uri.scheme.lowercase() !in setOf("http", "https")) return null
-    if (!uriHost.equals(baseHost, ignoreCase = true)) return null
+    val uri = parseUri(address) ?: return null
+    if (!uri.scheme.isHttpScheme()) return null
+    if (uri.normalizedHost() != baseHost) return null
 
     return uri.toASCIIString()
 }
 
 private fun String.hasHttpScheme(): Boolean =
     startsWith("https://", ignoreCase = true) || startsWith("http://", ignoreCase = true)
+
+private fun String?.isHttpScheme(): Boolean =
+    this.equals("http", ignoreCase = true) || this.equals("https", ignoreCase = true)
+
+private fun URI.normalizedHost(): String? =
+    host?.lowercase()?.removePrefix("www.")
 
 private fun parseUri(value: String): URI? =
     runCatching { URI(value) }.getOrNull()
