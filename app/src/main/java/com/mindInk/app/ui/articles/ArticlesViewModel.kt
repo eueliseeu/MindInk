@@ -3,13 +3,13 @@ package com.mindInk.app.ui.articles
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
-import com.mindInk.app.data.article.toCardUi
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
+import com.mindInk.app.ui.articles.mapper.toCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -97,37 +97,40 @@ class ArticlesViewModel @Inject constructor(
         _uiState.update { it.copy(isLoadingMore = true) }
 
         viewModelScope.launch {
-            when (
-                val result = loadArticlesPage(
-                    pageSize = EXPLORE_PAGE_SIZE,
-                    startAfterDocumentId = exploreCursorId
-                )
-            ) {
-                is LoadArticlesPageResult.Success -> {
-                    val page = result.page
-                    val newCards = page.articles.map { it.toCardUi() }
-                    if (page.nextCursorId != null) {
-                        exploreCursorId = page.nextCursorId
+            try {
+                when (
+                    val result = loadArticlesPage(
+                        pageSize = EXPLORE_PAGE_SIZE,
+                        startAfterDocumentId = exploreCursorId
+                    )
+                ) {
+                    is LoadArticlesPageResult.Success -> {
+                        val page = result.page
+                        val newCards = page.articles.map { it.toCardUi() }
+                        if (page.nextCursorId != null) {
+                            exploreCursorId = page.nextCursorId
+                        }
+                        _uiState.update { state ->
+                            state.copy(
+                                isLoadingMore = false,
+                                exploreArticles = appendUnique(state.exploreArticles, newCards),
+                                hasMoreExplore = page.hasMore,
+                                errorMessage = null
+                            )
+                        }
                     }
-                    _uiState.update { state ->
-                        state.copy(
-                            isLoadingMore = false,
-                            exploreArticles = appendUnique(state.exploreArticles, newCards),
-                            hasMoreExplore = page.hasMore,
-                            errorMessage = null
-                        )
+                    is LoadArticlesPageResult.Error -> {
+                        _uiState.update {
+                            it.copy(
+                                isLoadingMore = false,
+                                errorMessage = result.message
+                            )
+                        }
                     }
                 }
-                is LoadArticlesPageResult.Error -> {
-                    _uiState.update {
-                        it.copy(
-                            isLoadingMore = false,
-                            errorMessage = result.message
-                        )
-                    }
-                }
+            } finally {
+                isLoadingMoreInternal = false
             }
-            isLoadingMoreInternal = false
         }
     }
 

@@ -1,9 +1,7 @@
 package com.mindInk.app.data.article
 
 import com.google.firebase.firestore.DocumentSnapshot
-import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.Article
-import com.mindInk.app.ui.articles.model.ArticleCardUi
 
 internal fun DocumentSnapshot.toArticle(): Article? {
     val data = toObject(ArticleDto::class.java) ?: return null
@@ -40,16 +38,4 @@ internal fun Article.toDto(): ArticleDto = ArticleDto(
     starCount = starCount,
     createdAt = createdAt,
     updatedAt = updatedAt
-)
-
-fun Article.toCardUi(): ArticleCardUi = ArticleCardUi(
-    id = id,
-    category = category.ifBlank { "Tech" },
-    title = title,
-    summary = subtitle.ifBlank { preview(120) },
-    authorName = formatAuthorName(authorName),
-    authorPhotoUrl = authorPhotoUrl,
-    starCount = starCount,
-    starredBy = starredBy,
-    createdAt = createdAt
 )
