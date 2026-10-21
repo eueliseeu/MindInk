@@ -8,6 +8,7 @@ import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
+import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +18,8 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
-private const val LATEST_LIMIT = 6L
+private const val LATEST_LIMIT = 6
+private const val REALTIME_LIMIT = 40L
 private const val EXPLORE_PAGE_SIZE = 10L
 
 @HiltViewModel
@@ -31,17 +33,19 @@ class ArticlesViewModel @Inject constructor(
 
     private var exploreCursorId: String? = null
     private var isLoadingMoreInternal = false
+    private var hasLoadedFirstPage = false
 
     init {
-        observeLatest()
-        loadMoreExplore()
+        observeRealtime()
     }
 
-    private fun observeLatest() {
+    private fun observeRealtime() {
         viewModelScope.launch {
-            observeArticles.observeAll().collect { result ->
+            observeArticles(REALTIME_LIMIT).collect { result ->
                 when (result) {
                     is ObserveArticlesResult.Success -> {
+                        val all = result.articles.map { it.toCardUi() }
+                        val latest = all.take(LATEST_LIMIT)
                         val authors = result.articles
                             .distinctBy { it.authorUid }
                             .map { article ->
@@ -51,15 +55,23 @@ class ArticlesViewModel @Inject constructor(
                                     photoUrl = article.authorPhotoUrl
                                 )
                             }
-                        val latest = result.articles
-                            .take(LATEST_LIMIT.toInt())
-                            .map { it.toCardUi() }
+
                         _uiState.update { state ->
+                            val explore = if (!hasLoadedFirstPage) {
+                                hasLoadedFirstPage = true
+                                exploreCursorId = all.lastOrNull()?.id
+                                all
+                            } else {
+                                mergeRealtime(state.exploreArticles, all)
+                            }
+
                             state.copy(
                                 isLoading = false,
                                 latestArticles = latest,
                                 authors = authors,
-                                exploreArticles = mergeStarCounts(state.exploreArticles, latest),
+                                exploreArticles = explore,
+                                hasMoreExplore = all.size >= REALTIME_LIMIT.toInt() ||
+                                    state.hasMoreExplore,
                                 errorMessage = null
                             )
                         }
@@ -76,7 +88,10 @@ class ArticlesViewModel @Inject constructor(
 
     fun loadMoreExplore() {
         if (isLoadingMoreInternal) return
-        if (!_uiState.value.hasMoreExplore && exploreCursorId != null) return
+        if (!_uiState.value.hasMoreExplore) return
+        if (exploreCursorId == null && _uiState.value.exploreArticles.isNotEmpty()) {
+            exploreCursorId = _uiState.value.exploreArticles.lastOrNull()?.id
+        }
 
         isLoadingMoreInternal = true
         _uiState.update { it.copy(isLoadingMore = true) }
@@ -91,13 +106,13 @@ class ArticlesViewModel @Inject constructor(
                 is LoadArticlesPageResult.Success -> {
                     val page = result.page
                     val newCards = page.articles.map { it.toCardUi() }
-                    exploreCursorId = page.nextCursorId
+                    if (page.nextCursorId != null) {
+                        exploreCursorId = page.nextCursorId
+                    }
                     _uiState.update { state ->
-                        val merged = appendUnique(state.exploreArticles, newCards)
                         state.copy(
-                            isLoading = false,
                             isLoadingMore = false,
-                            exploreArticles = merged,
+                            exploreArticles = appendUnique(state.exploreArticles, newCards),
                             hasMoreExplore = page.hasMore,
                             errorMessage = null
                         )
@@ -106,7 +121,6 @@ class ArticlesViewModel @Inject constructor(
                 is LoadArticlesPageResult.Error -> {
                     _uiState.update {
                         it.copy(
-                            isLoading = false,
                             isLoadingMore = false,
                             errorMessage = result.message
                         )
@@ -117,22 +131,23 @@ class ArticlesViewModel @Inject constructor(
         }
     }
 
-    private fun appendUnique(
-        current: List<com.mindInk.app.ui.articles.model.ArticleCardUi>,
-        incoming: List<com.mindInk.app.ui.articles.model.ArticleCardUi>
-    ): List<com.mindInk.app.ui.articles.model.ArticleCardUi> {
-        val ids = current.map { it.id }.toHashSet()
-        return current + incoming.filter { it.id !in ids }
+    private fun mergeRealtime(
+        current: List<ArticleCardUi>,
+        observed: List<ArticleCardUi>
+    ): List<ArticleCardUi> {
+        if (observed.isEmpty()) return current
+        val observedMap = observed.associateBy { it.id }
+        val currentIds = current.map { it.id }.toHashSet()
+        val brandNew = observed.filter { it.id !in currentIds }
+        val updated = current.map { card -> observedMap[card.id] ?: card }
+        return brandNew + updated
     }
 
-    private fun mergeStarCounts(
-        explore: List<com.mindInk.app.ui.articles.model.ArticleCardUi>,
-        latest: List<com.mindInk.app.ui.articles.model.ArticleCardUi>
-    ): List<com.mindInk.app.ui.articles.model.ArticleCardUi> {
-        if (explore.isEmpty() || latest.isEmpty()) return explore
-        val stars = latest.associate { it.id to it.starCount }
-        return explore.map { card ->
-            stars[card.id]?.let { count -> card.copy(starCount = count) } ?: card
-        }
+    private fun appendUnique(
+        current: List<ArticleCardUi>,
+        incoming: List<ArticleCardUi>
+    ): List<ArticleCardUi> {
+        val ids = current.map { it.id }.toHashSet()
+        return current + incoming.filter { it.id !in ids }
     }
 }

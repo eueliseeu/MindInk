@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -41,6 +40,7 @@ private val RowShape = RoundedCornerShape(16.dp)
 @Composable
 fun ExploreArticleRow(
     article: ArticleCardUi,
+    currentUid: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -55,17 +55,6 @@ fun ExploreArticleRow(
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.Top
     ) {
-        Box(
-            modifier = Modifier
-                .width(3.dp)
-                .height(56.dp)
-                .clip(RoundedCornerShape(2.dp))
-                .background(MindInkStar.copy(alpha = 0.85f))
-                .align(Alignment.CenterVertically)
-        )
-
-        Spacer(modifier = Modifier.width(14.dp))
-
         Column(modifier = Modifier.weight(1f)) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -141,7 +130,11 @@ fun ExploreArticleRow(
                 Icon(
                     imageVector = Icons.Outlined.Star,
                     contentDescription = null,
-                    tint = MindInkStar,
+                    tint = if (currentUid != null && currentUid in article.starredBy) {
+                        MindInkStar
+                    } else {
+                        MindInkWhite
+                    },
                     modifier = Modifier.size(16.dp)
                 )
 

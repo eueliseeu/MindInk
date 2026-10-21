@@ -144,4 +144,4 @@ private fun CategoryTag(text: String) {
             .background(MindInkWhite, CircleShape)
             .padding(horizontal = 10.dp, vertical = 3.dp)
     )
-}
+} 

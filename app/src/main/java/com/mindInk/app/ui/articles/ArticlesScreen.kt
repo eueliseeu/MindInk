@@ -159,6 +159,7 @@ fun ArticlesScreen(
                     ) { article ->
                         ExploreArticleRow(
                             article = article,
+                            currentUid = user.uid,
                             onClick = { onArticleClick(article) }
                         )
                     }

@@ -2,6 +2,7 @@ package com.mindInk.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.Box
@@ -52,6 +53,18 @@ class MainActivity : ComponentActivity() {
                 var selectedAuthorUid by rememberSaveable { mutableStateOf<String?>(null) }
                 var toast by remember { mutableStateOf<ToastMessage?>(null) }
 
+                val canNavigateBack = selectedArticleId != null ||
+                    selectedAuthorUid != null ||
+                    showCreateArticle
+
+                BackHandler(enabled = canNavigateBack) {
+                    when {
+                        selectedArticleId != null -> selectedArticleId = null
+                        selectedAuthorUid != null -> selectedAuthorUid = null
+                        showCreateArticle -> showCreateArticle = false
+                    }
+                }
+
                 LaunchedEffect(viewModel) {
                     viewModel.errorEvents.collect { reason ->
                         toast = ToastMessage(resources.getString(reason.toMessageRes()))
@@ -67,13 +80,20 @@ class MainActivity : ComponentActivity() {
                         val current = session
                         when {
                             current is SessionState.Authenticated && !uiState.isLoading -> {
+                                val openMyProfile: () -> Unit = {
+                                    selectedArticleId = null
+                                    showCreateArticle = false
+                                    selectedAuthorUid = current.user.uid
+                                }
+
                                 when {
                                     selectedArticleId != null -> {
                                         ArticleDetailScreen(
                                             articleId = selectedArticleId!!,
                                             user = current.user,
                                             onBack = { selectedArticleId = null },
-                                            onSignOut = viewModel::onSignOutClick
+                                            onSignOut = viewModel::onSignOutClick,
+                                            onProfileClick = openMyProfile
                                         )
                                     }
 
@@ -86,7 +106,8 @@ class MainActivity : ComponentActivity() {
                                                 selectedAuthorUid = null
                                                 selectedArticleId = card.id
                                             },
-                                            onSignOut = viewModel::onSignOutClick
+                                            onSignOut = viewModel::onSignOutClick,
+                                            onProfileClick = openMyProfile
                                         )
                                     }
 
@@ -98,7 +119,8 @@ class MainActivity : ComponentActivity() {
                                                 showCreateArticle = false
                                                 toast = ToastMessage("Artigo publicado.")
                                             },
-                                            onSignOut = viewModel::onSignOutClick
+                                            onSignOut = viewModel::onSignOutClick,
+                                            onProfileClick = openMyProfile
                                         )
                                     }
 
@@ -106,6 +128,7 @@ class MainActivity : ComponentActivity() {
                                         ArticlesScreen(
                                             user = current.user,
                                             onSignOut = viewModel::onSignOutClick,
+                                            onProfileClick = openMyProfile,
                                             onAddArticleClick = { showCreateArticle = true },
                                             onArticleClick = { card ->
                                                 selectedArticleId = card.id

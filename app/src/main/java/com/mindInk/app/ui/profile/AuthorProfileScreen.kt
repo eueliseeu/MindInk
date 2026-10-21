@@ -16,7 +16,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.domain.model.AuthUser
-import com.mindInk.app.ui.articles.components.ArticleCard
+import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.formatCount
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.components.MindInkTopBar
@@ -51,6 +51,7 @@ fun AuthorProfileScreen(
     onBack: () -> Unit,
     onArticleClick: (ArticleCardUi) -> Unit,
     onSignOut: () -> Unit = {},
+    onProfileClick: (() -> Unit)? = null,
     viewModel: AuthorProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -74,7 +75,8 @@ fun AuthorProfileScreen(
             onBack = onBack,
             showSearch = false,
             showUserMenu = true,
-            onSignOut = onSignOut
+            onSignOut = onSignOut,
+            onProfileClick = onProfileClick
         )
 
         when {
@@ -137,12 +139,10 @@ fun AuthorProfileScreen(
                             items = state.articles,
                             key = { article -> article.id }
                         ) { article ->
-                            ArticleCard(
+                            ExploreArticleRow(
                                 article = article,
-                                onClick = { onArticleClick(article) },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(horizontal = 20.dp, vertical = 8.dp)
+                                currentUid = user.uid,
+                                onClick = { onArticleClick(article) }
                             )
                         }
                     }
@@ -238,7 +238,7 @@ private fun ProfileHeader(
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
-                    imageVector = Icons.Rounded.Favorite,
+                    imageVector = Icons.Rounded.Star,
                     contentDescription = null,
                     tint = MindInkWhite,
                     modifier = Modifier.size(16.dp)

@@ -202,7 +202,7 @@ fun ArticleDetailScreen(
                             modifier = Modifier.fillMaxWidth()
                         )
 
-                        Spacer(modifier = Modifier.height(28.dp))
+                        Spacer(modifier = Modifier.height(8.dp))
 
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -235,7 +235,7 @@ fun ArticleDetailScreen(
                                         "Ouvir artigo"
                                     },
                                     tint = MindInkWhite,
-                                    modifier = Modifier.size(28.dp)
+                                    modifier = Modifier.size(20.dp)
                                 )
                             }
                         }

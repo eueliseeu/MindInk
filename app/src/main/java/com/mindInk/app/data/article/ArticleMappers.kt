@@ -50,5 +50,6 @@ fun Article.toCardUi(): ArticleCardUi = ArticleCardUi(
     authorName = formatAuthorName(authorName),
     authorPhotoUrl = authorPhotoUrl,
     starCount = starCount,
+    starredBy = starredBy,
     createdAt = createdAt
 )
