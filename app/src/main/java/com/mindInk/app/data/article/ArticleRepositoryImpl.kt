@@ -110,6 +110,8 @@ class ArticleRepositoryImpl @Inject constructor(
                     hasMore = snapshot.documents.size >= pageSize.toInt()
                 )
             )
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             LoadArticlesPageResult.Error(
                 e.message ?: "Falha ao carregar mais artigos."
@@ -120,6 +122,8 @@ class ArticleRepositoryImpl @Inject constructor(
     override suspend fun getArticleById(articleId: String): Article? {
         return try {
             articles.document(articleId).get().await().toArticle()
+        } catch (e: CancellationException) {
+            throw e
         } catch (_: Exception) {
             null
         }
@@ -156,6 +160,8 @@ class ArticleRepositoryImpl @Inject constructor(
             )
             ref.set(dto).await()
             CreateArticleResult.Success(ref.id)
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             CreateArticleResult.Error(e.message ?: "Não foi possível publicar o artigo.")
         }
@@ -189,6 +195,8 @@ class ArticleRepositoryImpl @Inject constructor(
                 SetOptions.merge()
             ).await()
             UpdateArticleResult.Success
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             UpdateArticleResult.Error(e.message ?: "Não foi possível atualizar o artigo.")
         }
@@ -238,6 +246,8 @@ class ArticleRepositoryImpl @Inject constructor(
             }
             ref.delete().await()
             DeleteArticleResult.Success
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             DeleteArticleResult.Error(e.message ?: "Não foi possível apagar o artigo.")
         }
@@ -269,6 +279,8 @@ class ArticleRepositoryImpl @Inject constructor(
                 )
             }.await()
             ToggleStarResult.Success
+        } catch (e: CancellationException) {
+            throw e
         } catch (e: Exception) {
             ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a estrela.")
         }
