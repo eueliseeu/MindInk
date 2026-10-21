@@ -41,6 +41,7 @@ private const val CardWidthFraction = 1f
 @Composable
 fun LatestArticlesSection(
     articles: List<ArticleCardUi>,
+    currentUid: String?,
     onArticleClick: (ArticleCardUi) -> Unit,
     onAddClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -86,6 +87,7 @@ fun LatestArticlesSection(
             ) { article ->
                 ArticleCard(
                     article = article,
+                    currentUid = currentUid,
                     onClick = { onArticleClick(article) },
                     modifier = Modifier.fillParentMaxWidth(CardWidthFraction)
                 )

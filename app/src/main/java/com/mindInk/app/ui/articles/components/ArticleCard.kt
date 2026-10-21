@@ -39,6 +39,7 @@ private val AuthorAvatarSize = 32.dp
 @Composable
 fun ArticleCard(
     article: ArticleCardUi,
+    currentUid: String?,
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -116,7 +117,11 @@ fun ArticleCard(
             Icon(
                 imageVector = Icons.Outlined.Star,
                 contentDescription = null,
-                tint = MindInkStar,
+                tint = if (currentUid != null && currentUid in article.starredBy) {
+                    MindInkStar
+                } else {
+                    MindInkWhite
+                },
                 modifier = Modifier.size(18.dp)
             )
 
@@ -144,4 +149,4 @@ private fun CategoryTag(text: String) {
             .background(MindInkWhite, CircleShape)
             .padding(horizontal = 10.dp, vertical = 3.dp)
     )
-} 
+}

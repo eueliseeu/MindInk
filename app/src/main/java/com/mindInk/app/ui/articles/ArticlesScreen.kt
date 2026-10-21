@@ -107,6 +107,7 @@ fun ArticlesScreen(
                 item(key = "latest_articles") {
                     LatestArticlesSection(
                         articles = state.latestArticles,
+                        currentUid = user.uid,
                         onArticleClick = onArticleClick,
                         onAddClick = onAddArticleClick
                     )
