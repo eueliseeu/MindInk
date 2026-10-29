@@ -30,8 +30,8 @@ import com.mindInk.app.ui.auth.toMessageRes
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
 import com.mindInk.app.ui.profile.AuthorProfileScreen
-import com.mindInk.app.ui.splash.SplashScreen
 import com.mindInk.app.ui.settings.AccountSettingsScreen
+import com.mindInk.app.ui.splash.SplashScreen
 import com.mindInk.app.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -74,6 +74,12 @@ class MainActivity : ComponentActivity() {
                 LaunchedEffect(viewModel) {
                     viewModel.errorEvents.collect { reason ->
                         toast = ToastMessage(resources.getString(reason.toMessageRes()))
+                    }
+                }
+
+                LaunchedEffect(viewModel) {
+                    viewModel.offlineEvents.collect { message ->
+                        toast = ToastMessage(message)
                     }
                 }
 
@@ -154,7 +160,7 @@ class MainActivity : ComponentActivity() {
                                             onBack = { showCreateArticle = false },
                                             onSaved = {
                                                 showCreateArticle = false
-                                                toast = ToastMessage("Artigo publicado.")
+                                                toast = ToastMessage("Seu artigo foi publicado.")
                                             },
                                             onSignOut = viewModel::onSignOutClick,
                                             onProfileClick = openMyProfile,
