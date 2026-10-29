@@ -299,12 +299,12 @@ app/src/
 
 **Advisor:** Prof. Daniel Henrique Matos de Paiva
 
-| Name | Student ID (RA) |
-| --- | --- |
-| Eliseu Pereira da Silva | 124220479 |
-| Maycon Soares De Resende | 125111404445 |
-| Fabricio Rocha Souza Neves | 125111399975 |
-| Gustavo Silva Lourenço | 125111410319 |
-| Gustavo Morais de Oliveira Siqueira | 1242022304 |
-| Bruno Resende Ribeiro | 124220140 |
-| Ana Júlia Brum | 124222016 |
+| Name | Student ID (RA) | Function |
+| --- | --- | --- |
+| Eliseu Pereira da Silva | 124220479 | Developer |
+| Maycon Soares De Resende | 125111404445 | Test User |
+| Fabricio Rocha Souza Neves | 125111399975 | Test User |
+| Gustavo Silva Lourenço | 125111410319 | Test User |
+| Gustavo Morais de Oliveira Siqueira | 1242022304 | Vídeo Maker |
+| Bruno Resende Ribeiro | 124220140 | Creator PPTX |
+| Ana Júlia Brum | 124222016 | Creator of the Report |
