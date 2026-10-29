@@ -3,6 +3,7 @@ package com.mindInk.app.ui.auth
 import android.app.Activity
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.mindInk.app.core.ConnectivityObserver
 import com.mindInk.app.domain.model.AuthProvider
 import com.mindInk.app.domain.repository.AuthErrorReason
 import com.mindInk.app.domain.repository.SignInResult
@@ -19,6 +20,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -32,7 +34,8 @@ class AuthViewModel @Inject constructor(
     private val signInWithGitHubUseCase: SignInWithGitHubUseCase,
     private val linkPendingAccountUseCase: LinkPendingAccountUseCase,
     private val discardPendingLinkUseCase: DiscardPendingLinkUseCase,
-    private val signOutUseCase: SignOutUseCase
+    private val signOutUseCase: SignOutUseCase,
+    private val connectivityObserver: ConnectivityObserver
 ) : ViewModel() {
 
     val sessionState: StateFlow<SessionState> = observeAuthStateUseCase()
@@ -50,6 +53,28 @@ class AuthViewModel @Inject constructor(
 
     private val _errorEvents = Channel<AuthErrorReason>(Channel.BUFFERED)
     val errorEvents: Flow<AuthErrorReason> = _errorEvents.receiveAsFlow()
+
+    private val _offlineEvents = Channel<String>(Channel.BUFFERED)
+    val offlineEvents: Flow<String> = _offlineEvents.receiveAsFlow()
+
+    init {
+        observeConnectivity()
+    }
+
+    private fun observeConnectivity() {
+        viewModelScope.launch {
+            connectivityObserver
+                .observe()
+                .debounce(800L)
+                .collect { online ->
+                    if (!online && sessionState.value is SessionState.Authenticated) {
+                        signOutUseCase()
+                        _uiState.value = AuthUiState()
+                        _offlineEvents.send("Por favor, conectar à internet para continuar.")
+                    }
+                }
+        }
+    }
 
     fun onGoogleClick(activity: Activity) {
         launchSignIn(AuthProvider.GOOGLE) { signInWithGoogleUseCase(activity) }
