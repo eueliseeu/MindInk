@@ -299,12 +299,12 @@ app/src/
 
 **Orientador:** Prof. Daniel Henrique Matos de Paiva
 
-| Nome | RA |
-| --- | --- |
-| Eliseu Pereira da Silva | 124220479 |
-| Maycon Soares De Resende | 125111404445 |
-| Fabricio Rocha Souza Neves | 125111399975 |
-| Gustavo Silva Lourenço | 125111410319 |
-| Gustavo Morais de Oliveira Siqueira | 1242022304 |
-| Bruno Resende Ribeiro | 124220140 |
-| Ana Júlia Brum | 124222016 |
+| Nome | RA | Função |
+| --- | --- | --- |
+| Eliseu Pereira da Silva | 124220479 | Desenvolvedor |
+| Maycon Soares De Resende | 125111404445 | Usuário de Teste |
+| Fabricio Rocha Souza Neves | 125111399975 | Usuário de Teste |
+| Gustavo Silva Lourenço | 125111410319 | Usuário de Teste |
+| Gustavo Morais de Oliveira Siqueira | 1242022304 | Vídeo Maker |
+| Bruno Resende Ribeiro | 124220140 | Criador do PPTX |
+| Ana Júlia Brum | 124222016 | Criadora do Relatório |
