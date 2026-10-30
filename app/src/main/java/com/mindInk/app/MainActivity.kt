@@ -30,6 +30,7 @@ import com.mindInk.app.ui.auth.toMessageRes
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
 import com.mindInk.app.ui.home.GuestArticleDetailScreen
+import com.mindInk.app.ui.home.GuestAuthorProfileScreen
 import com.mindInk.app.ui.home.GuestHomeScreen
 import com.mindInk.app.ui.profile.AuthorProfileScreen
 import com.mindInk.app.ui.settings.AccountSettingsScreen
@@ -233,8 +234,22 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    selectedAuthorUid != null -> {
+                                        GuestAuthorProfileScreen(
+                                            authorUid = selectedAuthorUid!!,
+                                            onBack = { selectedAuthorUid = null },
+                                            onArticleClick = { card ->
+                                                selectedAuthorUid = null
+                                                selectedArticleId = card.id
+                                            },
+                                            onAccessMoreClick = {
+                                                selectedAuthorUid = null
+                                                showLogin = true
+                                            }
+                                        )
+                                    }
+
                                     else -> {
-                                        selectedAuthorUid = null
                                         GuestHomeScreen(
                                             onMyAccountClick = { showLogin = true },
                                             onArticleClick = { card ->
