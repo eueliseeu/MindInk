@@ -32,6 +32,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,7 +53,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 private val HorizontalPad = 20.dp
-private const val VISIBLE_COUNT = 4
+private const val VISIBLE_COUNT = 5
 private const val ROTATE_MS = 60_000L
 
 @Composable
@@ -60,9 +61,17 @@ fun GuestHomeScreen(
     onMyAccountClick: () -> Unit,
     onArticleClick: (ArticleCardUi) -> Unit,
     onAuthorClick: (AuthorUi) -> Unit,
-    onSearchClick: () -> Unit = {},
     viewModel: ArticlesViewModel = hiltViewModel()
 ) {
+    val context = LocalContext.current
+    val appVersion = remember(context) {
+        runCatching {
+            context.packageManager
+                .getPackageInfo(context.packageName, 0)
+                .versionName
+        }.getOrNull().orEmpty().ifBlank { "1.0" }
+    }
+
     val state by viewModel.uiState.collectAsState()
     val pool = state.topRatedArticles
     var visiblePair by remember { mutableStateOf<List<ArticleCardUi>>(emptyList()) }
@@ -88,9 +97,9 @@ fun GuestHomeScreen(
         MindInkTopBar(
             screenTitle = "/ Mindlink.",
             user = null,
-            showSearch = true,
+            showSearch = false,
             showUserMenu = false,
-            onSearchClick = onSearchClick
+            trailingText = "v$appVersion"
         )
 
         LazyColumn(

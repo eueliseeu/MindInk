@@ -47,6 +47,7 @@ import com.mindInk.app.R
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.theme.MindInkBorder
+import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkSurfaceVariant
 import com.mindInk.app.ui.theme.MindInkWhite
 
@@ -67,6 +68,7 @@ fun MindInkTopBar(
     onSettingsClick: (() -> Unit)? = null,
     showSearch: Boolean = true,
     showUserMenu: Boolean = true,
+    trailingText: String? = null,
     modifier: Modifier = Modifier
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
@@ -126,6 +128,14 @@ fun MindInkTopBar(
                 )
             }
             Spacer(modifier = Modifier.width(4.dp))
+        } else if (!trailingText.isNullOrBlank()) {
+            Text(
+                text = trailingText,
+                color = MindInkMuted,
+                fontSize = 13.sp,
+                fontWeight = FontWeight.Medium,
+                maxLines = 1
+            )
         }
 
         if (canShowUser && user != null) {
