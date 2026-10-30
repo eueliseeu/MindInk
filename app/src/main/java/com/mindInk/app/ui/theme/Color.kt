@@ -17,6 +17,4 @@ val MindInkRed = Color(0xFFE53935)
 val MindInkRedDark = Color(0xFFB71C1C)
 val MindInkError = Color(0xFFFF6B6B)
 
-val MindInkHeart = Color(0xFFFF5A75)
 val MindInkStar = Color(0xFFFFD54F)
-val MindInkChat = Color(0xFF4FC3F7)

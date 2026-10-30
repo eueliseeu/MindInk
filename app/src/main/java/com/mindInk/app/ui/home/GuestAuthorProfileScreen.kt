@@ -2,7 +2,6 @@ package com.mindInk.app.ui.home
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,9 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
@@ -34,7 +31,6 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
@@ -47,12 +43,12 @@ import com.mindInk.app.R
 import com.mindInk.app.core.normalizeSocialProfileUrl
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.model.ArticleCardUi
+import com.mindInk.app.ui.components.MindInkCtaButton
 import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.profile.AuthorProfileViewModel
 import com.mindInk.app.ui.theme.MindInkBackground
 import com.mindInk.app.ui.theme.MindInkMuted
-import com.mindInk.app.ui.theme.MindInkSurfaceVariant
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private const val GUEST_ARTICLES_LIMIT = 2
@@ -134,10 +130,7 @@ fun GuestAuthorProfileScreen(
                         )
                     }
 
-                    items(
-                        items = previewArticles,
-                        key = { it.id }
-                    ) { article ->
+                    items(previewArticles, key = { it.id }) { article ->
                         ExploreArticleRow(
                             article = article,
                             currentUid = null,
@@ -147,7 +140,8 @@ fun GuestAuthorProfileScreen(
 
                     item(key = "cta") {
                         Spacer(modifier = Modifier.height(20.dp))
-                        AccessMoreButton(
+                        MindInkCtaButton(
+                            text = "Acesse para ver mais",
                             onClick = onAccessMoreClick,
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -269,34 +263,5 @@ private fun GuestProfileHeader(
                 }
             }
         }
-    }
-}
-
-@Composable
-private fun AccessMoreButton(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier
-            .height(52.dp)
-            .clip(RoundedCornerShape(26.dp))
-            .background(MindInkSurfaceVariant)
-            .clickable(onClick = onClick)
-            .padding(horizontal = 20.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "Acesse para ver mais",
-            color = MindInkWhite,
-            fontSize = 15.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.weight(1f)
-        )
-        Icon(
-            imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-            contentDescription = null,
-            tint = MindInkWhite
-        )
     }
 }
