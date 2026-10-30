@@ -7,9 +7,9 @@ import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
+import com.mindInk.app.ui.articles.mapper.toCardUi
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
-import com.mindInk.app.ui.articles.mapper.toCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,6 +21,8 @@ import javax.inject.Inject
 private const val LATEST_LIMIT = 6
 private const val REALTIME_LIMIT = 40L
 private const val EXPLORE_PAGE_SIZE = 10L
+private const val FAMOUS_AUTHORS_LIMIT = 12
+private const val TOP_RATED_LIMIT = 10
 
 @HiltViewModel
 class ArticlesViewModel @Inject constructor(
@@ -44,9 +46,11 @@ class ArticlesViewModel @Inject constructor(
             observeArticles(REALTIME_LIMIT).collect { result ->
                 when (result) {
                     is ObserveArticlesResult.Success -> {
-                        val all = result.articles.map { it.toCardUi() }
+                        val domain = result.articles
+                        val all = domain.map { it.toCardUi() }
                         val latest = all.take(LATEST_LIMIT)
-                        val authors = result.articles
+
+                        val authors = domain
                             .distinctBy { it.authorUid }
                             .map { article ->
                                 AuthorUi(
@@ -55,6 +59,25 @@ class ArticlesViewModel @Inject constructor(
                                     photoUrl = article.authorPhotoUrl
                                 )
                             }
+
+                        val famousAuthors = domain
+                            .groupBy { it.authorUid }
+                            .map { (_, list) ->
+                                val first = list.first()
+                                AuthorUi(
+                                    uid = first.authorUid,
+                                    name = formatAuthorName(first.authorName),
+                                    photoUrl = first.authorPhotoUrl,
+                                    totalStars = list.sumOf { it.starCount }
+                                )
+                            }
+                            .sortedByDescending { it.totalStars }
+                            .take(FAMOUS_AUTHORS_LIMIT)
+
+                        val topRated = all
+                            .sortedByDescending { it.starCount }
+                            .take(TOP_RATED_LIMIT)
+
                         val windowFull = all.size >= REALTIME_LIMIT.toInt()
 
                         _uiState.update { state ->
@@ -70,6 +93,8 @@ class ArticlesViewModel @Inject constructor(
                                 isLoading = false,
                                 latestArticles = latest,
                                 authors = authors,
+                                famousAuthors = famousAuthors,
+                                topRatedArticles = topRated,
                                 exploreArticles = explore,
                                 hasMoreExplore = windowFull || state.hasMoreExplore,
                                 errorMessage = null

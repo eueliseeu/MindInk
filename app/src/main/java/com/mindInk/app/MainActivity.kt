@@ -29,6 +29,7 @@ import com.mindInk.app.ui.auth.SessionState
 import com.mindInk.app.ui.auth.toMessageRes
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
+import com.mindInk.app.ui.home.GuestHomeScreen
 import com.mindInk.app.ui.profile.AuthorProfileScreen
 import com.mindInk.app.ui.settings.AccountSettingsScreen
 import com.mindInk.app.ui.splash.SplashScreen
@@ -49,6 +50,7 @@ class MainActivity : ComponentActivity() {
                 val session by viewModel.sessionState.collectAsState()
                 val uiState by viewModel.uiState.collectAsState()
                 var showSplash by rememberSaveable { mutableStateOf(true) }
+                var showLogin by rememberSaveable { mutableStateOf(false) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
                 var showAccountSettings by rememberSaveable { mutableStateOf(false) }
                 var profileNameOverride by rememberSaveable { mutableStateOf<String?>(null) }
@@ -57,10 +59,19 @@ class MainActivity : ComponentActivity() {
                 var selectedAuthorUid by rememberSaveable { mutableStateOf<String?>(null) }
                 var toast by remember { mutableStateOf<ToastMessage?>(null) }
 
-                val canNavigateBack = selectedArticleId != null ||
-                    selectedAuthorUid != null ||
-                    showCreateArticle ||
-                    showAccountSettings
+                val isAuthenticated = session is SessionState.Authenticated && !uiState.isLoading
+
+                val canNavigateBack = when {
+                    isAuthenticated ->
+                        selectedArticleId != null ||
+                            selectedAuthorUid != null ||
+                            showCreateArticle ||
+                            showAccountSettings
+                    else ->
+                        showLogin ||
+                            selectedArticleId != null ||
+                            selectedAuthorUid != null
+                }
 
                 BackHandler(enabled = canNavigateBack) {
                     when {
@@ -68,7 +79,12 @@ class MainActivity : ComponentActivity() {
                         selectedAuthorUid != null -> selectedAuthorUid = null
                         showCreateArticle -> showCreateArticle = false
                         showAccountSettings -> showAccountSettings = false
+                        showLogin -> showLogin = false
                     }
+                }
+
+                LaunchedEffect(isAuthenticated) {
+                    if (isAuthenticated) showLogin = false
                 }
 
                 LaunchedEffect(viewModel) {
@@ -189,13 +205,32 @@ class MainActivity : ComponentActivity() {
                             else -> {
                                 showCreateArticle = false
                                 showAccountSettings = false
-                                selectedArticleId = null
-                                selectedAuthorUid = null
-                                LoginScreen(
-                                    loadingProvider = uiState.loadingProvider,
-                                    onGoogleClick = { viewModel.onGoogleClick(this@MainActivity) },
-                                    onGitHubClick = { viewModel.onGitHubClick(this@MainActivity) }
-                                )
+
+                                when {
+                                    showLogin -> {
+                                        LoginScreen(
+                                            loadingProvider = uiState.loadingProvider,
+                                            onGoogleClick = {
+                                                viewModel.onGoogleClick(this@MainActivity)
+                                            },
+                                            onGitHubClick = {
+                                                viewModel.onGitHubClick(this@MainActivity)
+                                            }
+                                        )
+                                    }
+
+                                    else -> {
+                                        GuestHomeScreen(
+                                            onMyAccountClick = { showLogin = true },
+                                            onArticleClick = { card ->
+                                                selectedArticleId = card.id
+                                            },
+                                            onAuthorClick = { author ->
+                                                selectedAuthorUid = author.uid
+                                            }
+                                        )
+                                    }
+                                }
                             }
                         }
                     }
