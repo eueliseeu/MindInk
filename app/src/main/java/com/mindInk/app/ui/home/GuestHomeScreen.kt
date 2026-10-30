@@ -1,3 +1,4 @@
+
 package com.mindInk.app.ui.home
 
 import androidx.compose.animation.AnimatedContent
@@ -9,6 +10,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
@@ -18,9 +20,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -29,12 +31,15 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -45,12 +50,11 @@ import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.components.MindInkCtaButton
 import com.mindInk.app.ui.components.MindInkTopBar
-import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.theme.MindInkBackground
+import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkSurface
 import com.mindInk.app.ui.theme.MindInkWhite
 import kotlinx.coroutines.delay
-import com.mindInk.app.ui.theme.MindInkMuted
 import kotlinx.coroutines.isActive
 
 private val HorizontalPad = 20.dp
@@ -65,6 +69,7 @@ fun GuestHomeScreen(
     viewModel: ArticlesViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
+
     val appVersion = remember(context) {
         runCatching {
             context.packageManager
@@ -75,101 +80,183 @@ fun GuestHomeScreen(
 
     val state by viewModel.uiState.collectAsState()
     val pool = state.topRatedArticles
-    var visiblePair by remember { mutableStateOf<List<ArticleCardUi>>(emptyList()) }
+
+    var visiblePair by remember {
+        mutableStateOf<List<ArticleCardUi>>(emptyList())
+    }
 
     LaunchedEffect(pool) {
         if (pool.isEmpty()) {
             visiblePair = emptyList()
             return@LaunchedEffect
         }
+
         visiblePair = pickTwo(pool, visiblePair)
+
         while (isActive) {
             delay(ROTATE_MS)
             visiblePair = pickTwo(pool, visiblePair)
         }
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MindInkBackground)
-            .navigationBarsPadding()
     ) {
-        MindInkTopBar(
-            screenTitle = "/ Mindlink.",
-            user = null,
-            showSearch = false,
-            showUserMenu = false,
-            trailingText = "v$appVersion"
-        )
 
-        LazyColumn(
-            modifier = Modifier.weight(1f),
-            contentPadding = PaddingValues(bottom = 8.dp)
+        // Conteúdo principal
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .navigationBarsPadding()
         ) {
-            item(key = "banner") {
-                Spacer(modifier = Modifier.height(12.dp))
-                Image(
-                    painter = painterResource(id = R.drawable.home_banner),
-                    contentDescription = null,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = HorizontalPad)
-                        .height(140.dp)
-                        .clip(RoundedCornerShape(18.dp))
-                        .background(MindInkSurface)
-                )
-            }
 
-            item(key = "top_title") {
-                Spacer(modifier = Modifier.height(28.dp))
-                Text(
-                    text = "Artigos mais avaliados",
-                    color = MindInkWhite,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = HorizontalPad)
-                )
-                Spacer(modifier = Modifier.height(6.dp))
-                Text(
-                    text = "Alguns conteúdos com mais estrelas da comunidade MindInk.",
-                    color = MindInkMuted,
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp,
-                    modifier = Modifier.padding(horizontal = HorizontalPad)
-                )
-                Spacer(modifier = Modifier.height(12.dp))
-            }
+            MindInkTopBar(
+                screenTitle = "/ Mindlink.",
+                user = null,
+                showSearch = false,
+                showUserMenu = false,
+                trailingText = "v$appVersion"
+            )
 
-            item(key = "top_rated_pair") {
-                AnimatedContent(
-                    targetState = visiblePair,
-                    transitionSpec = {
-                        fadeIn(tween(500)) togetherWith fadeOut(tween(500))
-                    },
-                    label = "guestTopRated"
-                ) { pair ->
-                    Column {
-                        pair.take(VISIBLE_COUNT).forEach { article ->
-                            ExploreArticleRow(
-                                article = article,
-                                currentUid = null,
-                                onClick = { onArticleClick(article) }
-                            )
+            LazyColumn(
+                modifier = Modifier.weight(1f),
+                contentPadding = PaddingValues(
+                    bottom = 190.dp
+                )
+            ) {
+
+                item(key = "banner") {
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Image(
+                        painter = painterResource(
+                            id = R.drawable.home_banner
+                        ),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = HorizontalPad)
+                            .height(140.dp)
+                            .clip(RoundedCornerShape(18.dp))
+                            .background(MindInkSurface)
+                    )
+                }
+
+                item(key = "top_title") {
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    Text(
+                        text = "Artigos mais avaliados",
+                        color = MindInkWhite,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(
+                            horizontal = HorizontalPad
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(6.dp))
+
+                    Text(
+                        text = "Os conteúdos com mais estrelas da comunidade MindInk.",
+                        color = MindInkMuted,
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp,
+                        modifier = Modifier.padding(
+                            horizontal = HorizontalPad
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+                }
+
+                item(key = "top_rated_pair") {
+                    AnimatedContent(
+                        targetState = visiblePair,
+                        transitionSpec = {
+                            fadeIn(tween(500)) togetherWith
+                                fadeOut(tween(500))
+                        },
+                        label = "guestTopRated"
+                    ) { pair ->
+                        Column {
+                            pair.take(VISIBLE_COUNT).forEach { article ->
+                                ExploreArticleRow(
+                                    article = article,
+                                    currentUid = null,
+                                    onClick = {
+                                        onArticleClick(article)
+                                    }
+                                )
+                            }
                         }
                     }
                 }
             }
         }
 
-        MindInkCtaButton(
-            text = "Minha Conta",
-            onClick = onMyAccountClick,
+        // Cartão flutuante de convite
+        Card(
             modifier = Modifier
+                .align(Alignment.BottomCenter)
                 .fillMaxWidth()
-                .padding(horizontal = HorizontalPad, vertical = 12.dp)
-        )
+                .padding(
+                    horizontal = HorizontalPad,
+                    vertical = 14.dp
+                )
+                .navigationBarsPadding()
+                .shadow(
+                    elevation = 12.dp,
+                    shape = RoundedCornerShape(22.dp)
+                ),
+            shape = RoundedCornerShape(22.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MindInkSurface
+            ),
+            elevation = CardDefaults.cardElevation(
+                defaultElevation = 6.dp
+            )
+        ) {
+
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(18.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+
+                Text(
+                    text = "Faça parte da MindInk!",
+                    color = MindInkWhite,
+                    fontSize = 17.sp,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(7.dp))
+
+                Text(
+                    text = "Ainda não possui uma conta? Crie já a sua! " +
+                            "É rápido e fácil. Venha compartilhar suas ideias " +
+                            "com nossa comunidade.",
+                    color = MindInkMuted,
+                    fontSize = 12.sp,
+                    lineHeight = 18.sp,
+                    textAlign = TextAlign.Center
+                )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                MindInkCtaButton(
+                    text = "Minha Conta",
+                    onClick = onMyAccountClick,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+        }
     }
 }
 
@@ -178,9 +265,18 @@ private fun pickTwo(
     current: List<ArticleCardUi>
 ): List<ArticleCardUi> {
     if (pool.isEmpty()) return emptyList()
-    if (pool.size <= VISIBLE_COUNT) return pool.shuffled().take(VISIBLE_COUNT)
+
+    if (pool.size <= VISIBLE_COUNT) {
+        return pool.shuffled().take(VISIBLE_COUNT)
+    }
+
     val currentIds = current.map { it.id }.toSet()
     val preferred = pool.filter { it.id !in currentIds }
-    val source = if (preferred.size >= VISIBLE_COUNT) preferred else pool
+    val source = if (preferred.size >= VISIBLE_COUNT) {
+        preferred
+    } else {
+        pool
+    }
+
     return source.shuffled().take(VISIBLE_COUNT)
 }
