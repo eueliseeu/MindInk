@@ -1,5 +1,10 @@
 package com.mindInk.app.ui.home
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -22,8 +27,12 @@ import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -44,8 +53,12 @@ import com.mindInk.app.ui.theme.MindInkBackground
 import com.mindInk.app.ui.theme.MindInkSurface
 import com.mindInk.app.ui.theme.MindInkSurfaceVariant
 import com.mindInk.app.ui.theme.MindInkWhite
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 
 private val HorizontalPad = 20.dp
+private const val VISIBLE_COUNT = 2
+private const val ROTATE_MS = 60_000L
 
 @Composable
 fun GuestHomeScreen(
@@ -56,6 +69,21 @@ fun GuestHomeScreen(
     viewModel: ArticlesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val pool = state.topRatedArticles
+
+    var visiblePair by remember { mutableStateOf<List<ArticleCardUi>>(emptyList()) }
+
+    LaunchedEffect(pool) {
+        if (pool.isEmpty()) {
+            visiblePair = emptyList()
+            return@LaunchedEffect
+        }
+        visiblePair = pickTwo(pool, visiblePair)
+        while (isActive) {
+            delay(ROTATE_MS)
+            visiblePair = pickTwo(pool, visiblePair)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -133,15 +161,24 @@ fun GuestHomeScreen(
                 Spacer(modifier = Modifier.height(8.dp))
             }
 
-            items(
-                items = state.topRatedArticles,
-                key = { "top_${it.id}" }
-            ) { article ->
-                ExploreArticleRow(
-                    article = article,
-                    currentUid = null,
-                    onClick = { onArticleClick(article) }
-                )
+            item(key = "top_rated_pair") {
+                AnimatedContent(
+                    targetState = visiblePair,
+                    transitionSpec = {
+                        fadeIn(tween(500)) togetherWith fadeOut(tween(500))
+                    },
+                    label = "guestTopRated"
+                ) { pair ->
+                    Column {
+                        pair.take(VISIBLE_COUNT).forEach { article ->
+                            ExploreArticleRow(
+                                article = article,
+                                currentUid = null,
+                                onClick = { onArticleClick(article) }
+                            )
+                        }
+                    }
+                }
             }
         }
 
@@ -152,6 +189,18 @@ fun GuestHomeScreen(
                 .padding(horizontal = HorizontalPad, vertical = 12.dp)
         )
     }
+}
+
+private fun pickTwo(
+    pool: List<ArticleCardUi>,
+    current: List<ArticleCardUi>
+): List<ArticleCardUi> {
+    if (pool.isEmpty()) return emptyList()
+    if (pool.size <= VISIBLE_COUNT) return pool.shuffled().take(VISIBLE_COUNT)
+    val currentIds = current.map { it.id }.toSet()
+    val preferred = pool.filter { it.id !in currentIds }
+    val source = if (preferred.size >= VISIBLE_COUNT) preferred else pool
+    return source.shuffled().take(VISIBLE_COUNT)
 }
 
 @Composable
