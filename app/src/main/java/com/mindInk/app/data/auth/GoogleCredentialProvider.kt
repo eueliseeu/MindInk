@@ -11,7 +11,7 @@ import androidx.credentials.exceptions.ClearCredentialException
 import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
-import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
+import com.google.android.libraries.identity.googleid.GetGoogleIdOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
 import com.mindInk.app.R
@@ -34,12 +34,32 @@ internal class GoogleCredentialProvider @Inject constructor(
 ) {
 
     suspend fun getIdToken(activity: Activity): GoogleTokenResult {
-        val signInOption = GetSignInWithGoogleOption
-            .Builder(appContext.getString(R.string.default_web_client_id))
+        return when (val authorized = requestGoogleIdToken(activity, filterAuthorized = true)) {
+            is GoogleTokenResult.Error -> {
+                if (authorized.reason == AuthErrorReason.NO_GOOGLE_ACCOUNT) {
+                    requestGoogleIdToken(activity, filterAuthorized = false)
+                } else {
+                    authorized
+                }
+            }
+            else -> authorized
+        }
+    }
+
+    private suspend fun requestGoogleIdToken(
+        activity: Activity,
+        filterAuthorized: Boolean
+    ): GoogleTokenResult {
+        val webClientId = appContext.getString(R.string.default_web_client_id)
+
+        val googleIdOption = GetGoogleIdOption.Builder()
+            .setFilterByAuthorizedAccounts(filterAuthorized)
+            .setServerClientId(webClientId)
+            .setAutoSelectEnabled(false)
             .build()
 
         val request = GetCredentialRequest.Builder()
-            .addCredentialOption(signInOption)
+            .addCredentialOption(googleIdOption)
             .build()
 
         return try {
@@ -60,7 +80,7 @@ internal class GoogleCredentialProvider @Inject constructor(
         } catch (e: NoCredentialException) {
             GoogleTokenResult.Error(AuthErrorReason.NO_GOOGLE_ACCOUNT)
         } catch (e: GetCredentialException) {
-            Log.w(TAG, "Falha ao obter credencial do Google", e)
+            Log.w(TAG, "Falha ao obter credencial do Google (filterAuthorized=$filterAuthorized)", e)
             GoogleTokenResult.Error(AuthErrorReason.UNKNOWN)
         } catch (e: GoogleIdTokenParsingException) {
             Log.w(TAG, "Token do Google inválido", e)
