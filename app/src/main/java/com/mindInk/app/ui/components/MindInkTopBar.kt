@@ -51,10 +51,11 @@ import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkSurfaceVariant
 import com.mindInk.app.ui.theme.MindInkWhite
 
-private val LogoSize = 44.dp
-private val SearchButtonSize = 44.dp
-private val AvatarSize = 48.dp
-private val TopBarTopPadding = 28.dp
+private val LogoSize = 32.dp
+private val SearchButtonSize = 36.dp
+private val AvatarSize = 36.dp
+private val TopBarTopPadding = 12.dp
+private val TopBarBottomPadding = 8.dp
 private val MenuGap = 6.dp
 
 @Composable
@@ -81,7 +82,12 @@ fun MindInkTopBar(
             .fillMaxWidth()
             .background(MaterialTheme.colorScheme.background)
             .statusBarsPadding()
-            .padding(start = 20.dp, end = 20.dp, top = TopBarTopPadding, bottom = 12.dp),
+            .padding(
+                start = 20.dp,
+                end = 20.dp,
+                top = TopBarTopPadding,
+                bottom = TopBarBottomPadding
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (onBack != null) {
@@ -92,7 +98,8 @@ fun MindInkTopBar(
                 Icon(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = "Voltar",
-                    tint = MindInkWhite
+                    tint = MindInkWhite,
+                    modifier = Modifier.size(22.dp)
                 )
             }
             Spacer(modifier = Modifier.width(4.dp))
@@ -104,12 +111,12 @@ fun MindInkTopBar(
             modifier = Modifier.size(LogoSize)
         )
 
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
 
         Text(
             text = screenTitle,
             color = MindInkWhite,
-            fontSize = 18.sp,
+            fontSize = 15.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
@@ -124,7 +131,8 @@ fun MindInkTopBar(
             ) {
                 Icon(
                     imageVector = Icons.Rounded.Search,
-                    contentDescription = "Buscar"
+                    contentDescription = "Buscar",
+                    modifier = Modifier.size(20.dp)
                 )
             }
             Spacer(modifier = Modifier.width(4.dp))
@@ -132,7 +140,7 @@ fun MindInkTopBar(
             Text(
                 text = trailingText,
                 color = MindInkMuted,
-                fontSize = 13.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium,
                 maxLines = 1
             )

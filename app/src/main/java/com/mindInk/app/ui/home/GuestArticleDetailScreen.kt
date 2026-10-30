@@ -159,7 +159,7 @@ fun GuestArticleDetailScreen(
                     Spacer(modifier = Modifier.height(28.dp))
 
                     MindInkCtaButton(
-                        text = "Minha Conta",
+                        text = "Continuar Lendo",
                         onClick = onMyAccountClick,
                         modifier = Modifier.fillMaxWidth()
                     )
