@@ -50,6 +50,7 @@ import com.mindInk.app.ui.theme.MindInkBackground
 import com.mindInk.app.ui.theme.MindInkSurface
 import com.mindInk.app.ui.theme.MindInkWhite
 import kotlinx.coroutines.delay
+import com.mindInk.app.ui.theme.MindInkMuted
 import kotlinx.coroutines.isActive
 
 private val HorizontalPad = 20.dp
@@ -130,7 +131,15 @@ fun GuestHomeScreen(
                     fontWeight = FontWeight.SemiBold,
                     modifier = Modifier.padding(horizontal = HorizontalPad)
                 )
-                Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(6.dp))
+                Text(
+                    text = "Alguns conteúdos com mais estrelas da comunidade MindInk.",
+                    color = MindInkMuted,
+                    fontSize = 14.sp,
+                    lineHeight = 20.sp,
+                    modifier = Modifier.padding(horizontal = HorizontalPad)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
             }
 
             item(key = "top_rated_pair") {
