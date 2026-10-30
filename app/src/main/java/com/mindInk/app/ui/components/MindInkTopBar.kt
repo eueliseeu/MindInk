@@ -59,7 +59,7 @@ private val MenuGap = 6.dp
 @Composable
 fun MindInkTopBar(
     screenTitle: String,
-    user: AuthUser,
+    user: AuthUser? = null,
     onSearchClick: () -> Unit = {},
     onSignOut: () -> Unit = {},
     onBack: (() -> Unit)? = null,
@@ -71,7 +71,8 @@ fun MindInkTopBar(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     val density = LocalDensity.current
-    val displayName = formatAuthorName(user.displayName ?: user.email)
+    val canShowUser = user != null && showUserMenu
+    val displayName = formatAuthorName(user?.displayName ?: user?.email)
 
     Row(
         modifier = modifier
@@ -127,101 +128,97 @@ fun MindInkTopBar(
             Spacer(modifier = Modifier.width(4.dp))
         }
 
-        Box {
-            UserAvatar(
-                photoUrl = user.photoUrl,
-                name = user.displayName,
-                size = AvatarSize,
-                modifier = Modifier
-                    .clip(CircleShape)
-                    .clickable(
-                        role = Role.Button,
-                        onClick = {
-                            if (showUserMenu) menuExpanded = true
-                        }
-                    )
-            )
+        if (canShowUser && user != null) {
+            Box {
+                UserAvatar(
+                    photoUrl = user.photoUrl,
+                    name = user.displayName,
+                    size = AvatarSize,
+                    modifier = Modifier
+                        .clip(CircleShape)
+                        .clickable(
+                            role = Role.Button,
+                            onClick = { menuExpanded = true }
+                        )
+                )
 
-            if (showUserMenu && menuExpanded) {
-                Popup(
-                    alignment = Alignment.TopEnd,
-                    offset = IntOffset(
-                        x = 0,
-                        y = with(density) { (AvatarSize + MenuGap).roundToPx() }
-                    ),
-                    onDismissRequest = { menuExpanded = false },
-                    properties = PopupProperties(focusable = true)
-                ) {
-                    Surface(
-                        shape = RoundedCornerShape(12.dp),
-                        color = MindInkSurfaceVariant,
-                        border = BorderStroke(1.dp, MindInkBorder),
-                        shadowElevation = 8.dp
+                if (menuExpanded) {
+                    Popup(
+                        alignment = Alignment.TopEnd,
+                        offset = IntOffset(
+                            x = 0,
+                            y = with(density) { (AvatarSize + MenuGap).roundToPx() }
+                        ),
+                        onDismissRequest = { menuExpanded = false },
+                        properties = PopupProperties(focusable = true)
                     ) {
-                        Column(
-                            modifier = Modifier
-                                .width(180.dp)
-                                .padding(vertical = 8.dp)
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = MindInkSurfaceVariant,
+                            border = BorderStroke(1.dp, MindInkBorder),
+                            shadowElevation = 8.dp
                         ) {
-                            Text(
-                                text = displayName,
-                                color = MindInkWhite,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Medium,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
-                            )
-
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(1.dp)
-                                    .background(MindInkBorder)
-                            )
-
-                            if (onProfileClick != null) {
+                            Column(modifier = Modifier.width(200.dp)) {
                                 Text(
-                                    text = "Perfil",
+                                    text = displayName,
+                                    color = MindInkWhite,
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                )
+
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(1.dp)
+                                        .background(MindInkBorder)
+                                )
+
+                                if (onProfileClick != null) {
+                                    Text(
+                                        text = "Perfil",
+                                        color = MindInkWhite,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                menuExpanded = false
+                                                onProfileClick()
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
+
+                                if (onSettingsClick != null) {
+                                    Text(
+                                        text = "Configurações",
+                                        color = MindInkWhite,
+                                        fontSize = 14.sp,
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                menuExpanded = false
+                                                onSettingsClick()
+                                            }
+                                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                                    )
+                                }
+
+                                Text(
+                                    text = "Sair",
                                     color = MindInkWhite,
                                     fontSize = 14.sp,
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
                                             menuExpanded = false
-                                            onProfileClick()
+                                            onSignOut()
                                         }
                                         .padding(horizontal = 16.dp, vertical = 12.dp)
                                 )
                             }
-
-                            if (onSettingsClick != null) {
-                                Text(
-                                    text = "Configurações",
-                                    color = MindInkWhite,
-                                    fontSize = 14.sp,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clickable {
-                                            menuExpanded = false
-                                            onSettingsClick()
-                                        }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp)
-                                )
-                            }
-
-                            Text(
-                                text = "Sair",
-                                color = MindInkWhite,
-                                fontSize = 14.sp,
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable {
-                                        menuExpanded = false
-                                        onSignOut()
-                                    }
-                                    .padding(horizontal = 16.dp, vertical = 12.dp)
-                            )
                         }
                     }
                 }
