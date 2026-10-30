@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -44,7 +45,6 @@ import com.mindInk.app.core.normalizeSocialProfileUrl
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.components.MindInkCtaButton
-import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.profile.AuthorProfileViewModel
 import com.mindInk.app.ui.theme.MindInkBackground
@@ -52,8 +52,8 @@ import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private const val GUEST_ARTICLES_LIMIT = 2
-private val BandHeight = 160.dp
-private val AvatarSize = 88.dp
+private val BandHeight = 220.dp
+private val AvatarSize = 96.dp
 
 @Composable
 fun GuestAuthorProfileScreen(
@@ -79,14 +79,6 @@ fun GuestAuthorProfileScreen(
             .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding()
     ) {
-        MindInkTopBar(
-            screenTitle = "/ $shortName",
-            user = null,
-            onBack = onBack,
-            showSearch = false,
-            showUserMenu = false
-        )
-
         when {
             state.isLoading -> {
                 Box(
@@ -101,7 +93,9 @@ fun GuestAuthorProfileScreen(
                 Text(
                     text = state.errorMessage ?: "Erro",
                     color = MindInkMuted,
-                    modifier = Modifier.padding(20.dp)
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(20.dp)
                 )
             }
 
@@ -173,7 +167,7 @@ private fun GuestProfileHeader(
                 .height(BandHeight + overlap)
         ) {
             Image(
-                painter = painterResource(id = R.drawable.home_banner),
+                painter = painterResource(id = R.drawable.profile_image),
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier

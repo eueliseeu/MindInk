@@ -52,7 +52,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 
 private val HorizontalPad = 20.dp
-private const val VISIBLE_COUNT = 2
+private const val VISIBLE_COUNT = 4
 private const val ROTATE_MS = 60_000L
 
 @Composable
@@ -110,34 +110,6 @@ fun GuestHomeScreen(
                         .clip(RoundedCornerShape(18.dp))
                         .background(MindInkSurface)
                 )
-            }
-
-            item(key = "famous_title") {
-                Spacer(modifier = Modifier.height(28.dp))
-                Text(
-                    text = "Famosos do MindInk",
-                    color = MindInkWhite,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(horizontal = HorizontalPad)
-                )
-                Spacer(modifier = Modifier.height(14.dp))
-            }
-
-            item(key = "famous_row") {
-                LazyRow(
-                    contentPadding = PaddingValues(horizontal = HorizontalPad),
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                ) {
-                    items(state.famousAuthors, key = { it.uid }) { author ->
-                        UserAvatar(
-                            photoUrl = author.photoUrl,
-                            name = author.name,
-                            size = 56.dp,
-                            modifier = Modifier.clickable { onAuthorClick(author) }
-                        )
-                    }
-                }
             }
 
             item(key = "top_title") {
