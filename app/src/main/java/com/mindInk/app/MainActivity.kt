@@ -29,6 +29,7 @@ import com.mindInk.app.ui.auth.SessionState
 import com.mindInk.app.ui.auth.toMessageRes
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
+import com.mindInk.app.ui.home.GuestArticleDetailScreen
 import com.mindInk.app.ui.home.GuestHomeScreen
 import com.mindInk.app.ui.profile.AuthorProfileScreen
 import com.mindInk.app.ui.settings.AccountSettingsScreen
@@ -84,7 +85,9 @@ class MainActivity : ComponentActivity() {
                 }
 
                 LaunchedEffect(isAuthenticated) {
-                    if (isAuthenticated) showLogin = false
+                    if (isAuthenticated) {
+                        showLogin = false
+                    }
                 }
 
                 LaunchedEffect(viewModel) {
@@ -219,7 +222,19 @@ class MainActivity : ComponentActivity() {
                                         )
                                     }
 
+                                    selectedArticleId != null -> {
+                                        GuestArticleDetailScreen(
+                                            articleId = selectedArticleId!!,
+                                            onBack = { selectedArticleId = null },
+                                            onMyAccountClick = {
+                                                selectedArticleId = null
+                                                showLogin = true
+                                            }
+                                        )
+                                    }
+
                                     else -> {
+                                        selectedAuthorUid = null
                                         GuestHomeScreen(
                                             onMyAccountClick = { showLogin = true },
                                             onArticleClick = { card ->
