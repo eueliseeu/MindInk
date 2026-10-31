@@ -21,8 +21,11 @@ interface ReadingProgressRepository {
         articleId: String,
         title: String,
         category: String,
+        summary: String,
         authorName: String,
         authorPhotoUrl: String?,
+        starCount: Int,
+        viewCount: Int,
         progress: Float
     ): UpsertReadingResult
 
