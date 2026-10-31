@@ -1,3 +1,4 @@
+
 package com.mindInk.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
@@ -51,12 +52,12 @@ import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkSurfaceVariant
 import com.mindInk.app.ui.theme.MindInkWhite
 
-private val LogoSize = 32.dp
-private val SearchButtonSize = 36.dp
-private val AvatarSize = 36.dp
-private val TopBarTopPadding = 12.dp
-private val TopBarBottomPadding = 8.dp
-private val MenuGap = 6.dp
+private val LogoSize = 38.dp
+private val SearchButtonSize = 40.dp
+private val AvatarSize = 42.dp
+private val TopBarTopPadding = 24.dp
+private val TopBarBottomPadding = 12.dp
+private val MenuGap = 8.dp
 
 @Composable
 fun MindInkTopBar(
@@ -99,9 +100,10 @@ fun MindInkTopBar(
                     imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
                     contentDescription = "Voltar",
                     tint = MindInkWhite,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
+
             Spacer(modifier = Modifier.width(4.dp))
         }
 
@@ -111,32 +113,19 @@ fun MindInkTopBar(
             modifier = Modifier.size(LogoSize)
         )
 
-        Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.width(12.dp))
 
         Text(
             text = screenTitle,
             color = MindInkWhite,
-            fontSize = 15.sp,
+            fontSize = 16.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f)
         )
 
-        if (showSearch) {
-            IconButton(
-                onClick = onSearchClick,
-                modifier = Modifier.size(SearchButtonSize),
-                colors = IconButtonDefaults.iconButtonColors(contentColor = MindInkWhite)
-            ) {
-                Icon(
-                    imageVector = Icons.Rounded.Search,
-                    contentDescription = "Buscar",
-                    modifier = Modifier.size(20.dp)
-                )
-            }
-            Spacer(modifier = Modifier.width(4.dp))
-        } else if (!trailingText.isNullOrBlank()) {
+        if (!trailingText.isNullOrBlank()) {
             Text(
                 text = trailingText,
                 color = MindInkMuted,
@@ -165,7 +154,9 @@ fun MindInkTopBar(
                         alignment = Alignment.TopEnd,
                         offset = IntOffset(
                             x = 0,
-                            y = with(density) { (AvatarSize + MenuGap).roundToPx() }
+                            y = with(density) {
+                                (AvatarSize + MenuGap).roundToPx()
+                            }
                         ),
                         onDismissRequest = { menuExpanded = false },
                         properties = PopupProperties(focusable = true)
@@ -176,7 +167,9 @@ fun MindInkTopBar(
                             border = BorderStroke(1.dp, MindInkBorder),
                             shadowElevation = 8.dp
                         ) {
-                            Column(modifier = Modifier.width(200.dp)) {
+                            Column(
+                                modifier = Modifier.width(200.dp)
+                            ) {
                                 Text(
                                     text = displayName,
                                     color = MindInkWhite,
@@ -184,7 +177,10 @@ fun MindInkTopBar(
                                     fontWeight = FontWeight.SemiBold,
                                     maxLines = 1,
                                     overflow = TextOverflow.Ellipsis,
-                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)
+                                    modifier = Modifier.padding(
+                                        horizontal = 16.dp,
+                                        vertical = 12.dp
+                                    )
                                 )
 
                                 Box(
@@ -205,7 +201,10 @@ fun MindInkTopBar(
                                                 menuExpanded = false
                                                 onProfileClick()
                                             }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                                            .padding(
+                                                horizontal = 16.dp,
+                                                vertical = 12.dp
+                                            )
                                     )
                                 }
 
@@ -220,7 +219,10 @@ fun MindInkTopBar(
                                                 menuExpanded = false
                                                 onSettingsClick()
                                             }
-                                            .padding(horizontal = 16.dp, vertical = 12.dp)
+                                            .padding(
+                                                horizontal = 16.dp,
+                                                vertical = 12.dp
+                                            )
                                     )
                                 }
 
@@ -234,7 +236,10 @@ fun MindInkTopBar(
                                             menuExpanded = false
                                             onSignOut()
                                         }
-                                        .padding(horizontal = 16.dp, vertical = 12.dp)
+                                        .padding(
+                                            horizontal = 16.dp,
+                                            vertical = 12.dp
+                                        )
                                 )
                             }
                         }
