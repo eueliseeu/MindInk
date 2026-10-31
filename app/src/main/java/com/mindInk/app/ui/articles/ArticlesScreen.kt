@@ -39,10 +39,10 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
+import com.mindInk.app.ui.articles.components.ContinueReadingSection
 import com.mindInk.app.ui.articles.components.MuralSection
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
-import com.mindInk.app.ui.articles.model.MuralItemUi
 import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkSurfaceVariant
@@ -84,7 +84,7 @@ fun ArticlesScreen(
             onSettingsClick = onSettingsClick
         )
 
-        if (state.isLoading && state.muralItems.isEmpty()) {
+        if (state.isLoading && state.muralItems.isEmpty() && state.continueReading.isEmpty()) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -180,6 +180,17 @@ fun ArticlesScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
+                    }
+                }
+
+                if (state.continueReading.isNotEmpty()) {
+                    item(key = "continue_reading") {
+                        Spacer(modifier = Modifier.height(28.dp))
+                        ContinueReadingSection(
+                            articles = state.continueReading,
+                            currentUid = user.uid,
+                            onArticleClick = onArticleClick
+                        )
                     }
                 }
             }

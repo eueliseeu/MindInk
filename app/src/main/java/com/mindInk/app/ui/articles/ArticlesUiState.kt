@@ -12,6 +12,7 @@ data class ArticlesUiState(
     val famousAuthors: List<AuthorUi> = emptyList(),
     val topRatedArticles: List<ArticleCardUi> = emptyList(),
     val muralItems: List<MuralItemUi> = emptyList(),
+    val continueReading: List<ArticleCardUi> = emptyList(),
     val isLoadingMore: Boolean = false,
     val hasMoreExplore: Boolean = true,
     val errorMessage: String? = null
