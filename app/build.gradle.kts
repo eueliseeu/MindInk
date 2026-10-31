@@ -72,4 +72,5 @@ dependencies {
     implementation(libs.coil.network.okhttp)
     implementation(libs.markdown.renderer)
     implementation(libs.markdown.renderer.m3)
+    implementation("androidx.datastore:datastore-preferences:1.1.1")
 }
