@@ -14,7 +14,9 @@ import com.mindInk.app.domain.usecase.auth.SignInWithGitHubUseCase
 import com.mindInk.app.domain.usecase.auth.SignInWithGoogleUseCase
 import com.mindInk.app.domain.usecase.auth.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -47,13 +49,28 @@ class AuthViewModel @Inject constructor(
             initialValue = SessionState.Loading
         )
 
-    val isOnline: StateFlow<Boolean> = connectivityObserver
-        .observe()
-        .stateIn(
-            scope = viewModelScope,
-            started = SharingStarted.WhileSubscribed(5_000),
-            initialValue = true
-        )
+    private val _isOnline = MutableStateFlow(true)
+    val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
+
+    private var offlineDebounceJob: Job? = null
+
+    init {
+        viewModelScope.launch {
+            connectivityObserver.observe().collect { online ->
+                if (online) {
+                    offlineDebounceJob?.cancel()
+                    offlineDebounceJob = null
+                    _isOnline.value = true
+                } else {
+                    offlineDebounceJob?.cancel()
+                    offlineDebounceJob = launch {
+                        delay(1_200L)
+                        _isOnline.value = false
+                    }
+                }
+            }
+        }
+    }
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()

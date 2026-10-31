@@ -5,6 +5,7 @@ import android.net.ConnectivityManager
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.NetworkRequest
+import android.os.Build
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -25,8 +26,11 @@ class ConnectivityObserver @Inject constructor(
         fun isOnline(): Boolean {
             val network = connectivityManager.activeNetwork ?: return false
             val caps = connectivityManager.getNetworkCapabilities(network) ?: return false
-            return caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            val hasInternet =
+                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            val validated =
                 caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            return hasInternet && validated
         }
 
         trySend(isOnline())
@@ -46,16 +50,25 @@ class ConnectivityObserver @Inject constructor(
             ) {
                 trySend(isOnline())
             }
+
+            override fun onUnavailable() {
+                trySend(false)
+            }
         }
 
-        val request = NetworkRequest.Builder()
-            .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            .build()
-
-        connectivityManager.registerNetworkCallback(request, callback)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            connectivityManager.registerDefaultNetworkCallback(callback)
+        } else {
+            val request = NetworkRequest.Builder()
+                .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                .build()
+            connectivityManager.registerNetworkCallback(request, callback)
+        }
 
         awaitClose {
-            connectivityManager.unregisterNetworkCallback(callback)
+            runCatching {
+                connectivityManager.unregisterNetworkCallback(callback)
+            }
         }
     }.distinctUntilChanged()
 }
