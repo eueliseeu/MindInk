@@ -81,6 +81,7 @@ fun ArticleDetailScreen(
     val tts = remember {
         ArticleTextToSpeech(context) { speaking -> isSpeaking = speaking }
     }
+    val scrollState = rememberScrollState()
 
     DisposableEffect(Unit) {
         onDispose { tts.shutdown() }
@@ -93,6 +94,13 @@ fun ArticleDetailScreen(
 
     LaunchedEffect(articleId) {
         viewModel.setArticleId(articleId)
+    }
+
+    LaunchedEffect(scrollState.value, scrollState.maxValue) {
+        if (scrollState.maxValue > 0) {
+            val progress = scrollState.value.toFloat() / scrollState.maxValue.toFloat()
+            viewModel.onScrollProgress(progress)
+        }
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
@@ -159,7 +167,7 @@ fun ArticleDetailScreen(
                         modifier = Modifier
                             .weight(1f)
                             .fillMaxWidth()
-                            .verticalScroll(rememberScrollState())
+                            .verticalScroll(scrollState)
                             .padding(horizontal = ContentHorizontalPadding)
                             .padding(bottom = 24.dp)
                     ) {

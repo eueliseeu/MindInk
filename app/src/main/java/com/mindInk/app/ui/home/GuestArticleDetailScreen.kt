@@ -160,7 +160,10 @@ fun GuestArticleDetailScreen(
 
                     MindInkCtaButton(
                         text = "Continuar Lendo",
-                        onClick = onMyAccountClick,
+                        onClick = {
+                            viewModel.onGuestContinueReadingClick()
+                            onMyAccountClick()
+                        },
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
