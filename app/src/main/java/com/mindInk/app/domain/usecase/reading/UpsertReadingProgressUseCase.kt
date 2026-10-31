@@ -12,16 +12,22 @@ class UpsertReadingProgressUseCase @Inject constructor(
         articleId: String,
         title: String,
         category: String,
+        summary: String,
         authorName: String,
         authorPhotoUrl: String?,
+        starCount: Int,
+        viewCount: Int,
         progress: Float
     ): UpsertReadingResult = repository.upsertProgress(
         uid = uid,
         articleId = articleId,
         title = title,
         category = category,
+        summary = summary,
         authorName = authorName,
         authorPhotoUrl = authorPhotoUrl,
+        starCount = starCount,
+        viewCount = viewCount,
         progress = progress
     )
 }
