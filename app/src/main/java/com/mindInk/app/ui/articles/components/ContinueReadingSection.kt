@@ -31,11 +31,21 @@ fun ContinueReadingSection(
             modifier = Modifier.padding(horizontal = 20.dp)
         )
 
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "Artigos que você abriu e ainda não terminou de ler.",
+            color = MindInkMuted,
+            fontSize = 13.sp,
+            lineHeight = 18.sp,
+            modifier = Modifier.padding(horizontal = 20.dp)
+        )
+
         Spacer(modifier = Modifier.height(12.dp))
 
         if (articles.isEmpty()) {
             Text(
-                text = "Tá ruim de leitura em... Abre um artigo e volta depois.",
+                text = "Nenhum artigo pendente por aqui.",
                 color = MindInkMuted,
                 fontSize = 14.sp,
                 modifier = Modifier.padding(horizontal = 20.dp)

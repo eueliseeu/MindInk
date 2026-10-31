@@ -8,6 +8,8 @@ import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.repository.ObserveReadingResult
+import com.mindInk.app.domain.repository.PublicUserProfile
+import com.mindInk.app.domain.repository.UserProfileRepository
 import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
@@ -41,7 +43,8 @@ class ArticlesViewModel @Inject constructor(
     private val observeContinueReading: ObserveContinueReadingUseCase,
     private val upsertReadingProgress: UpsertReadingProgressUseCase,
     private val getArticleById: GetArticleByIdUseCase,
-    private val pendingReadingStore: PendingReadingStore
+    private val pendingReadingStore: PendingReadingStore,
+    private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArticlesUiState())
@@ -53,6 +56,7 @@ class ArticlesViewModel @Inject constructor(
     private var currentUid: String? = null
     private var lastDomainArticles: List<Article> = emptyList()
     private var continueReadingJob: Job? = null
+    private var muralJob: Job? = null
 
     init {
         observeRealtime()
@@ -61,9 +65,7 @@ class ArticlesViewModel @Inject constructor(
     fun bindUser(uid: String) {
         if (currentUid == uid) return
         currentUid = uid
-        _uiState.update { state ->
-            state.copy(muralItems = buildMuralItems(lastDomainArticles, uid))
-        }
+        refreshMural(lastDomainArticles, uid)
         startContinueReading(uid)
         flushPendingReading(uid)
     }
@@ -107,7 +109,6 @@ class ArticlesViewModel @Inject constructor(
                             .take(TOP_RATED_LIMIT)
 
                         val windowFull = all.size >= REALTIME_LIMIT.toInt()
-                        val mural = currentUid?.let { buildMuralItems(domain, it) }.orEmpty()
 
                         _uiState.update { state ->
                             val explore = if (!hasLoadedFirstPage) {
@@ -125,10 +126,13 @@ class ArticlesViewModel @Inject constructor(
                                 famousAuthors = famousAuthors,
                                 topRatedArticles = topRated,
                                 exploreArticles = explore,
-                                muralItems = mural,
                                 hasMoreExplore = windowFull || state.hasMoreExplore,
                                 errorMessage = null
                             )
+                        }
+
+                        currentUid?.let { uid ->
+                            refreshMural(domain, uid)
                         }
                     }
                     is ObserveArticlesResult.Error -> {
@@ -141,6 +145,14 @@ class ArticlesViewModel @Inject constructor(
         }
     }
 
+    private fun refreshMural(articles: List<Article>, uid: String) {
+        muralJob?.cancel()
+        muralJob = viewModelScope.launch {
+            val items = buildMuralItems(articles, uid)
+            _uiState.update { it.copy(muralItems = items) }
+        }
+    }
+
     private fun startContinueReading(uid: String) {
         continueReadingJob?.cancel()
         continueReadingJob = viewModelScope.launch {
@@ -148,16 +160,19 @@ class ArticlesViewModel @Inject constructor(
                 when (result) {
                     is ObserveReadingResult.Success -> {
                         val cards = result.items.map { item ->
+                            val live = lastDomainArticles.firstOrNull { it.id == item.articleId }
                             ArticleCardUi(
                                 id = item.articleId,
-                                category = item.category.ifBlank { "Tech" },
-                                title = item.title,
-                                summary = "",
-                                authorName = formatAuthorName(item.authorName),
-                                authorPhotoUrl = item.authorPhotoUrl,
-                                starCount = 0,
-                                viewCount = 0,
-                                starredBy = emptyList(),
+                                category = (live?.category ?: item.category).ifBlank { "Tech" },
+                                title = live?.title ?: item.title,
+                                summary = live?.subtitle?.takeIf { it.isNotBlank() }
+                                    ?: live?.preview(120)
+                                    ?: item.summary,
+                                authorName = formatAuthorName(live?.authorName ?: item.authorName),
+                                authorPhotoUrl = live?.authorPhotoUrl ?: item.authorPhotoUrl,
+                                starCount = live?.starCount ?: item.starCount,
+                                viewCount = live?.viewCount ?: item.viewCount,
+                                starredBy = live?.starredBy.orEmpty(),
                                 createdAt = item.updatedAt
                             )
                         }
@@ -180,8 +195,11 @@ class ArticlesViewModel @Inject constructor(
                     articleId = article.id,
                     title = article.title,
                     category = article.category,
+                    summary = article.subtitle.ifBlank { article.preview(120) },
                     authorName = article.authorName,
                     authorPhotoUrl = article.authorPhotoUrl,
+                    starCount = article.starCount,
+                    viewCount = article.viewCount,
                     progress = 0f
                 )
             }
@@ -237,7 +255,7 @@ class ArticlesViewModel @Inject constructor(
         }
     }
 
-    private fun buildMuralItems(
+    private suspend fun buildMuralItems(
         articles: List<Article>,
         uid: String
     ): List<MuralItemUi> {
@@ -247,6 +265,20 @@ class ArticlesViewModel @Inject constructor(
             .groupBy { it.authorUid }
             .mapValues { (_, list) -> list.first() }
 
+        val starerUids = articles
+            .filter { it.authorUid == uid }
+            .flatMap { it.starredBy }
+            .filter { it != uid }
+            .distinct()
+
+        val missingUids = starerUids.filter { it !in authorLookup }
+        val profileLookup: Map<String, PublicUserProfile> =
+            if (missingUids.isEmpty()) {
+                emptyMap()
+            } else {
+                userProfileRepository.getProfiles(missingUids)
+            }
+
         val events = mutableListOf<MuralItemUi>()
 
         articles
@@ -255,12 +287,21 @@ class ArticlesViewModel @Inject constructor(
                 article.starredBy
                     .filter { starerUid -> starerUid != uid }
                     .forEach { starerUid ->
-                        val starer = authorLookup[starerUid]
+                        val fromArticle = authorLookup[starerUid]
+                        val fromProfile = profileLookup[starerUid]
+                        val name = when {
+                            !fromArticle?.authorName.isNullOrBlank() ->
+                                formatAuthorName(fromArticle?.authorName)
+                            !fromProfile?.name.isNullOrBlank() ->
+                                formatAuthorName(fromProfile?.name)
+                            else -> "Alguém"
+                        }
+                        val photo = fromArticle?.authorPhotoUrl ?: fromProfile?.photoUrl
                         events += MuralItemUi.StarReceived(
                             id = "star_${article.id}_$starerUid",
                             actorUid = starerUid,
-                            actorName = formatAuthorName(starer?.authorName),
-                            actorPhotoUrl = starer?.authorPhotoUrl,
+                            actorName = name,
+                            actorPhotoUrl = photo,
                             articleId = article.id,
                             articleTitle = article.title,
                             sortKey = maxOf(article.updatedAt, article.createdAt)

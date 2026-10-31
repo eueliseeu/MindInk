@@ -64,7 +64,11 @@ fun ArticlesScreen(
     val listState = rememberLazyListState()
     val navigationBarPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
     val displayName = formatAuthorName(user.displayName ?: user.email)
+        .trim()
+        .split(" ")
+        .first()
 
     LaunchedEffect(user.uid) {
         viewModel.bindUser(user.uid)
@@ -84,7 +88,7 @@ fun ArticlesScreen(
             onSettingsClick = onSettingsClick
         )
 
-        if (state.isLoading && state.muralItems.isEmpty() && state.continueReading.isEmpty()) {
+        if (state.isLoading) {
             Box(
                 modifier = Modifier
                     .weight(1f)
@@ -115,9 +119,11 @@ fun ArticlesScreen(
                             color = MindInkMuted,
                             fontSize = 14.sp
                         )
+
                         Spacer(modifier = Modifier.height(4.dp))
+
                         Text(
-                            text = "Olá, $displayName",
+                            text = "Olá, $displayName!",
                             color = MindInkWhite,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
@@ -125,33 +131,33 @@ fun ArticlesScreen(
                     }
                 }
 
-                if (state.muralItems.isNotEmpty()) {
-                    item(key = "mural") {
-                        Spacer(modifier = Modifier.height(20.dp))
-                        MuralSection(
-                            items = state.muralItems,
-                            onNewArticleClick = { item ->
-                                onArticleClick(
-                                    ArticleCardUi(
-                                        id = item.articleId,
-                                        category = "",
-                                        title = item.articleTitle,
-                                        summary = "",
-                                        authorName = item.actorName,
-                                        authorPhotoUrl = item.actorPhotoUrl,
-                                        starCount = 0,
-                                        viewCount = 0,
-                                        starredBy = emptyList(),
-                                        createdAt = item.sortKey
-                                    )
+                item(key = "mural") {
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    MuralSection(
+                        items = state.muralItems,
+                        onNewArticleClick = { item ->
+                            onArticleClick(
+                                ArticleCardUi(
+                                    id = item.articleId,
+                                    category = "",
+                                    title = item.articleTitle,
+                                    summary = "",
+                                    authorName = item.actorName,
+                                    authorPhotoUrl = item.actorPhotoUrl,
+                                    starCount = 0,
+                                    viewCount = 0,
+                                    starredBy = emptyList(),
+                                    createdAt = item.sortKey
                                 )
-                            }
-                        )
-                    }
+                            )
+                        }
+                    )
                 }
 
                 item(key = "artigos_button") {
                     Spacer(modifier = Modifier.height(24.dp))
+
                     Surface(
                         modifier = Modifier
                             .fillMaxWidth()
@@ -163,7 +169,10 @@ fun ArticlesScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 14.dp),
+                                .padding(
+                                    horizontal = 20.dp,
+                                    vertical = 14.dp
+                                ),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             Text(
@@ -173,6 +182,7 @@ fun ArticlesScreen(
                                 fontWeight = FontWeight.Medium,
                                 modifier = Modifier.weight(1f)
                             )
+
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
                                 contentDescription = null,
@@ -183,15 +193,14 @@ fun ArticlesScreen(
                     }
                 }
 
-                if (state.continueReading.isNotEmpty()) {
-                    item(key = "continue_reading") {
-                        Spacer(modifier = Modifier.height(28.dp))
-                        ContinueReadingSection(
-                            articles = state.continueReading,
-                            currentUid = user.uid,
-                            onArticleClick = onArticleClick
-                        )
-                    }
+                item(key = "continue_reading") {
+                    Spacer(modifier = Modifier.height(28.dp))
+
+                    ContinueReadingSection(
+                        articles = state.continueReading,
+                        currentUid = user.uid,
+                        onArticleClick = onArticleClick
+                    )
                 }
             }
         }
