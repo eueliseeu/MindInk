@@ -39,6 +39,15 @@ fun MuralSection(
             fontWeight = FontWeight.SemiBold
         )
 
+        Spacer(modifier = Modifier.height(4.dp))
+
+        Text(
+            text = "Estrelas recebidas e novidades dos seus autores",
+            color = MindInkMuted,
+            fontSize = 13.sp,
+            lineHeight = 18.sp
+        )
+
         Spacer(modifier = Modifier.height(16.dp))
 
         if (items.isEmpty()) {

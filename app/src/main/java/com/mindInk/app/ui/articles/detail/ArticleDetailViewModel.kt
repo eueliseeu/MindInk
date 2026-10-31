@@ -125,8 +125,11 @@ class ArticleDetailViewModel @Inject constructor(
                 articleId = article.id,
                 title = article.title,
                 category = article.category,
+                summary = article.subtitle.ifBlank { article.preview(120) },
                 authorName = article.authorName,
                 authorPhotoUrl = article.authorPhotoUrl,
+                starCount = article.starCount,
+                viewCount = article.viewCount,
                 progress = 0f
             )
         }
