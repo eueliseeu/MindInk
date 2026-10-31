@@ -1,4 +1,3 @@
-
 package com.mindInk.app.ui.articles.components
 
 import androidx.compose.foundation.clickable
@@ -28,8 +27,6 @@ fun MuralSection(
     onNewArticleClick: (MuralItemUi.NewArticleFromFavorite) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    if (items.isEmpty()) return
-
     Column(
         modifier = modifier
             .fillMaxWidth()
@@ -44,68 +41,63 @@ fun MuralSection(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        items.forEach { item ->
-            val clickable = item is MuralItemUi.NewArticleFromFavorite
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .then(
-                        if (clickable) {
-                            Modifier.clickable {
-                                onNewArticleClick(
-                                    item as MuralItemUi.NewArticleFromFavorite
-                                )
+        if (items.isEmpty()) {
+            Text(
+                text = "Nenhuma notificação ainda.",
+                color = MindInkMuted,
+                fontSize = 14.sp
+            )
+        } else {
+            items.forEach { item ->
+                val clickable = item is MuralItemUi.NewArticleFromFavorite
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .then(
+                            if (clickable) {
+                                Modifier.clickable {
+                                    onNewArticleClick(item as MuralItemUi.NewArticleFromFavorite)
+                                }
+                            } else {
+                                Modifier
                             }
-                        } else {
-                            Modifier
-                        }
-                    )
-                    .padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                UserAvatar(
-                    photoUrl = item.actorPhotoUrl,
-                    name = item.actorName,
-                    size = 40.dp
-                )
-
-                Spacer(modifier = Modifier.width(12.dp))
-
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = when (item) {
-                            is MuralItemUi.StarReceived ->
-                                "${firstName(item.actorName)} deixou uma estrela no seu artigo"
-
-                            is MuralItemUi.NewArticleFromFavorite ->
-                                "${firstName(item.actorName)} publicou um novo artigo"
-                        },
-                        color = MindInkWhite,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
+                        )
+                        .padding(vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    UserAvatar(
+                        photoUrl = item.actorPhotoUrl,
+                        name = item.actorName,
+                        size = 40.dp
                     )
 
-                    Spacer(modifier = Modifier.height(2.dp))
+                    Spacer(modifier = Modifier.width(12.dp))
 
-                    Text(
-                        text = item.articleTitle,
-                        color = MindInkMuted,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = when (item) {
+                                is MuralItemUi.StarReceived ->
+                                    "${item.actorName} deixou uma estrela no seu artigo"
+                                is MuralItemUi.NewArticleFromFavorite ->
+                                    "${item.actorName} publicou um novo artigo"
+                            },
+                            color = MindInkWhite,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = item.articleTitle,
+                            color = MindInkMuted,
+                            fontSize = 13.sp,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
                 }
             }
         }
     }
-}
-
-private fun firstName(fullName: String): String {
-    return fullName.trim()
-        .split(Regex("\\s+"))
-        .firstOrNull()
-        .orEmpty()
 }

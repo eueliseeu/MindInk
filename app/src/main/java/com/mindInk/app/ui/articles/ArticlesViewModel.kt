@@ -3,16 +3,22 @@ package com.mindInk.app.ui.articles
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
+import com.mindInk.app.data.reading.PendingReadingStore
 import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
+import com.mindInk.app.domain.repository.ObserveReadingResult
+import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
+import com.mindInk.app.domain.usecase.reading.ObserveContinueReadingUseCase
+import com.mindInk.app.domain.usecase.reading.UpsertReadingProgressUseCase
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.articles.model.MuralItemUi
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,11 +32,16 @@ private const val EXPLORE_PAGE_SIZE = 10L
 private const val FAMOUS_AUTHORS_LIMIT = 12
 private const val TOP_RATED_LIMIT = 10
 private const val MURAL_LIMIT = 3
+private const val CONTINUE_READING_LIMIT = 5L
 
 @HiltViewModel
 class ArticlesViewModel @Inject constructor(
     private val observeArticles: ObserveArticlesUseCase,
-    private val loadArticlesPage: LoadArticlesPageUseCase
+    private val loadArticlesPage: LoadArticlesPageUseCase,
+    private val observeContinueReading: ObserveContinueReadingUseCase,
+    private val upsertReadingProgress: UpsertReadingProgressUseCase,
+    private val getArticleById: GetArticleByIdUseCase,
+    private val pendingReadingStore: PendingReadingStore
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ArticlesUiState())
@@ -41,6 +52,7 @@ class ArticlesViewModel @Inject constructor(
     private var hasLoadedFirstPage = false
     private var currentUid: String? = null
     private var lastDomainArticles: List<Article> = emptyList()
+    private var continueReadingJob: Job? = null
 
     init {
         observeRealtime()
@@ -52,6 +64,8 @@ class ArticlesViewModel @Inject constructor(
         _uiState.update { state ->
             state.copy(muralItems = buildMuralItems(lastDomainArticles, uid))
         }
+        startContinueReading(uid)
+        flushPendingReading(uid)
     }
 
     private fun observeRealtime() {
@@ -124,6 +138,54 @@ class ArticlesViewModel @Inject constructor(
                     }
                 }
             }
+        }
+    }
+
+    private fun startContinueReading(uid: String) {
+        continueReadingJob?.cancel()
+        continueReadingJob = viewModelScope.launch {
+            observeContinueReading(uid, CONTINUE_READING_LIMIT).collect { result ->
+                when (result) {
+                    is ObserveReadingResult.Success -> {
+                        val cards = result.items.map { item ->
+                            ArticleCardUi(
+                                id = item.articleId,
+                                category = item.category.ifBlank { "Tech" },
+                                title = item.title,
+                                summary = "",
+                                authorName = formatAuthorName(item.authorName),
+                                authorPhotoUrl = item.authorPhotoUrl,
+                                starCount = 0,
+                                viewCount = 0,
+                                starredBy = emptyList(),
+                                createdAt = item.updatedAt
+                            )
+                        }
+                        _uiState.update { it.copy(continueReading = cards) }
+                    }
+                    is ObserveReadingResult.Error -> Unit
+                }
+            }
+        }
+    }
+
+    private fun flushPendingReading(uid: String) {
+        viewModelScope.launch {
+            val pending = pendingReadingStore.getOnce()
+            if (pending.isEmpty()) return@launch
+            pending.forEach { articleId ->
+                val article = getArticleById(articleId) ?: return@forEach
+                upsertReadingProgress(
+                    uid = uid,
+                    articleId = article.id,
+                    title = article.title,
+                    category = article.category,
+                    authorName = article.authorName,
+                    authorPhotoUrl = article.authorPhotoUrl,
+                    progress = 0f
+                )
+            }
+            pendingReadingStore.clear()
         }
     }
 
