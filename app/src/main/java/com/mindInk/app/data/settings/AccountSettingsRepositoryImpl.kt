@@ -1,7 +1,7 @@
 package com.mindInk.app.data.settings
 
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
 import com.mindInk.app.domain.model.AccountSettings
 import com.mindInk.app.domain.repository.AccountSettingsRepository
