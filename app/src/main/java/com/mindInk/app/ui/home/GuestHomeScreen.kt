@@ -105,7 +105,6 @@ fun GuestHomeScreen(
             .background(MindInkBackground)
     ) {
 
-        // Conteúdo principal
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -113,7 +112,7 @@ fun GuestHomeScreen(
         ) {
 
             MindInkTopBar(
-                screenTitle = "/ Mindlink.",
+                screenTitle = "/ MindInk.",
                 user = null,
                 showSearch = false,
                 showUserMenu = false,
@@ -198,7 +197,6 @@ fun GuestHomeScreen(
             }
         }
 
-        // Cartão flutuante de convite
         Card(
             modifier = Modifier
                 .align(Alignment.BottomCenter)

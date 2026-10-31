@@ -1,3 +1,4 @@
+
 package com.mindInk.app.ui.splash
 
 import androidx.compose.foundation.Image
@@ -28,6 +29,10 @@ import com.mindInk.app.ui.theme.MindInkBlack
 import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
 
+private val LogoSize = 38.dp
+private val TopBarTopPadding = 24.dp
+private val TopBarBottomPadding = 12.dp
+
 @Composable
 fun OfflineScreen() {
     Box(
@@ -35,31 +40,44 @@ fun OfflineScreen() {
             .fillMaxSize()
             .background(MindInkBlack)
     ) {
+
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .statusBarsPadding()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
+                .padding(
+                    start = 20.dp,
+                    end = 20.dp,
+                    top = TopBarTopPadding,
+                    bottom = TopBarBottomPadding
+                ),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
+
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Image(
                     painter = painterResource(id = R.drawable.ic_mindink_logo),
                     contentDescription = null,
-                    modifier = Modifier.size(28.dp)
+                    modifier = Modifier.size(LogoSize)
                 )
+
+                Spacer(modifier = Modifier.size(12.dp))
+
                 Text(
                     text = " / MindInk.",
                     color = MindInkWhite,
                     fontSize = 16.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.SemiBold
                 )
             }
+
             Text(
                 text = "Offline",
                 color = MindInkMuted,
-                fontSize = 14.sp,
+                fontSize = 12.sp,
                 fontWeight = FontWeight.Medium
             )
         }
@@ -71,6 +89,7 @@ fun OfflineScreen() {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center
         ) {
+
             Image(
                 painter = painterResource(id = R.drawable.error_connect),
                 contentDescription = "Sem conexão",
