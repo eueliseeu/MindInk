@@ -54,8 +54,11 @@ class ReadingProgressRepositoryImpl @Inject constructor(
                             articleId = dto.articleId,
                             title = dto.title,
                             category = dto.category,
+                            summary = dto.summary,
                             authorName = dto.authorName,
                             authorPhotoUrl = dto.authorPhotoUrl,
+                            starCount = dto.starCount,
+                            viewCount = dto.viewCount,
                             progress = dto.progress,
                             updatedAt = dto.updatedAt
                         )
@@ -72,8 +75,11 @@ class ReadingProgressRepositoryImpl @Inject constructor(
         articleId: String,
         title: String,
         category: String,
+        summary: String,
         authorName: String,
         authorPhotoUrl: String?,
+        starCount: Int,
+        viewCount: Int,
         progress: Float
     ): UpsertReadingResult = try {
         val clamped = progress.coerceIn(0f, 1f)
@@ -82,8 +88,11 @@ class ReadingProgressRepositoryImpl @Inject constructor(
                 "articleId" to articleId,
                 "title" to title,
                 "category" to category,
+                "summary" to summary,
                 "authorName" to authorName,
                 "authorPhotoUrl" to authorPhotoUrl,
+                "starCount" to starCount,
+                "viewCount" to viewCount,
                 "progress" to clamped,
                 "updatedAt" to System.currentTimeMillis()
             ),
