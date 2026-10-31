@@ -3,6 +3,7 @@ package com.mindInk.app.ui.articles
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
+import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
@@ -10,6 +11,7 @@ import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
+import com.mindInk.app.ui.articles.model.MuralItemUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -23,6 +25,7 @@ private const val REALTIME_LIMIT = 40L
 private const val EXPLORE_PAGE_SIZE = 10L
 private const val FAMOUS_AUTHORS_LIMIT = 12
 private const val TOP_RATED_LIMIT = 10
+private const val MURAL_LIMIT = 3
 
 @HiltViewModel
 class ArticlesViewModel @Inject constructor(
@@ -36,9 +39,19 @@ class ArticlesViewModel @Inject constructor(
     private var exploreCursorId: String? = null
     private var isLoadingMoreInternal = false
     private var hasLoadedFirstPage = false
+    private var currentUid: String? = null
+    private var lastDomainArticles: List<Article> = emptyList()
 
     init {
         observeRealtime()
+    }
+
+    fun bindUser(uid: String) {
+        if (currentUid == uid) return
+        currentUid = uid
+        _uiState.update { state ->
+            state.copy(muralItems = buildMuralItems(lastDomainArticles, uid))
+        }
     }
 
     private fun observeRealtime() {
@@ -47,6 +60,7 @@ class ArticlesViewModel @Inject constructor(
                 when (result) {
                     is ObserveArticlesResult.Success -> {
                         val domain = result.articles
+                        lastDomainArticles = domain
                         val all = domain.map { it.toCardUi() }
                         val latest = all.take(LATEST_LIMIT)
 
@@ -79,6 +93,7 @@ class ArticlesViewModel @Inject constructor(
                             .take(TOP_RATED_LIMIT)
 
                         val windowFull = all.size >= REALTIME_LIMIT.toInt()
+                        val mural = currentUid?.let { buildMuralItems(domain, it) }.orEmpty()
 
                         _uiState.update { state ->
                             val explore = if (!hasLoadedFirstPage) {
@@ -96,6 +111,7 @@ class ArticlesViewModel @Inject constructor(
                                 famousAuthors = famousAuthors,
                                 topRatedArticles = topRated,
                                 exploreArticles = explore,
+                                muralItems = mural,
                                 hasMoreExplore = windowFull || state.hasMoreExplore,
                                 errorMessage = null
                             )
@@ -157,6 +173,63 @@ class ArticlesViewModel @Inject constructor(
                 isLoadingMoreInternal = false
             }
         }
+    }
+
+    private fun buildMuralItems(
+        articles: List<Article>,
+        uid: String
+    ): List<MuralItemUi> {
+        if (articles.isEmpty()) return emptyList()
+
+        val authorLookup = articles
+            .groupBy { it.authorUid }
+            .mapValues { (_, list) -> list.first() }
+
+        val events = mutableListOf<MuralItemUi>()
+
+        articles
+            .filter { it.authorUid == uid }
+            .forEach { article ->
+                article.starredBy
+                    .filter { starerUid -> starerUid != uid }
+                    .forEach { starerUid ->
+                        val starer = authorLookup[starerUid]
+                        events += MuralItemUi.StarReceived(
+                            id = "star_${article.id}_$starerUid",
+                            actorUid = starerUid,
+                            actorName = formatAuthorName(starer?.authorName),
+                            actorPhotoUrl = starer?.authorPhotoUrl,
+                            articleId = article.id,
+                            articleTitle = article.title,
+                            sortKey = maxOf(article.updatedAt, article.createdAt)
+                        )
+                    }
+            }
+
+        val favoriteAuthorUids = articles
+            .filter { uid in it.starredBy }
+            .map { it.authorUid }
+            .filter { it != uid }
+            .toSet()
+
+        articles
+            .filter { it.authorUid in favoriteAuthorUids }
+            .forEach { article ->
+                events += MuralItemUi.NewArticleFromFavorite(
+                    id = "new_${article.id}",
+                    actorUid = article.authorUid,
+                    actorName = formatAuthorName(article.authorName),
+                    actorPhotoUrl = article.authorPhotoUrl,
+                    articleId = article.id,
+                    articleTitle = article.title,
+                    sortKey = article.createdAt
+                )
+            }
+
+        return events
+            .sortedByDescending { it.sortKey }
+            .distinctBy { it.id }
+            .take(MURAL_LIMIT)
     }
 
     private fun mergeRealtime(
