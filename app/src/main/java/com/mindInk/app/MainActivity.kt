@@ -34,6 +34,7 @@ import com.mindInk.app.ui.home.GuestAuthorProfileScreen
 import com.mindInk.app.ui.home.GuestHomeScreen
 import com.mindInk.app.ui.profile.AuthorProfileScreen
 import com.mindInk.app.ui.settings.AccountSettingsScreen
+import com.mindInk.app.ui.splash.OfflineScreen
 import com.mindInk.app.ui.splash.SplashScreen
 import com.mindInk.app.ui.theme.AppTheme
 import dagger.hilt.android.AndroidEntryPoint
@@ -51,6 +52,7 @@ class MainActivity : ComponentActivity() {
                 val viewModel: AuthViewModel = hiltViewModel()
                 val session by viewModel.sessionState.collectAsState()
                 val uiState by viewModel.uiState.collectAsState()
+                val isOnline by viewModel.isOnline.collectAsState()
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showLogin by rememberSaveable { mutableStateOf(false) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
@@ -97,17 +99,13 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(viewModel) {
-                    viewModel.offlineEvents.collect { message ->
-                        toast = ToastMessage(message)
-                    }
-                }
-
                 Box(modifier = Modifier.fillMaxSize()) {
                     if (showSplash || session is SessionState.Loading) {
                         SplashScreen(
                             onFinished = { showSplash = false }
                         )
+                    } else if (!isOnline) {
+                        OfflineScreen()
                     } else {
                         val current = session
                         when {
