@@ -5,6 +5,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.LaunchedEffect
@@ -18,7 +19,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.ui.articles.ArticlesScreen
 import com.mindInk.app.ui.articles.detail.ArticleDetailScreen
 import com.mindInk.app.ui.articles.editor.CreateEditArticleScreen
@@ -41,6 +41,9 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    private val authViewModel: AuthViewModel by viewModels()
+
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -49,7 +52,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             AppTheme {
                 val resources by rememberUpdatedState(LocalResources.current)
-                val viewModel: AuthViewModel = hiltViewModel()
+                val viewModel = authViewModel
                 val session by viewModel.sessionState.collectAsState()
                 val uiState by viewModel.uiState.collectAsState()
                 val isOnline by viewModel.isOnline.collectAsState()
@@ -278,5 +281,15 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        authViewModel.onAppStarted()
+    }
+
+    override fun onStop() {
+        authViewModel.onAppStopped()
+        super.onStop()
     }
 }

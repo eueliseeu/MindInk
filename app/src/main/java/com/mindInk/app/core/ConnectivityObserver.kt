@@ -19,36 +19,42 @@ class ConnectivityObserver @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
 
+    private val connectivityManager: ConnectivityManager
+        get() = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+
+    /**
+     * Checagem síncrona do estado atual da rede.
+     * Usada ao voltar do segundo plano para não depender de callbacks perdidos.
+     */
+    fun isCurrentlyOnline(): Boolean {
+        val manager = connectivityManager
+        val network = manager.activeNetwork ?: return false
+        val capabilities = manager.getNetworkCapabilities(network) ?: return false
+        return capabilities.hasUsableInternet()
+    }
+
     fun observe(): Flow<Boolean> = callbackFlow {
-        val connectivityManager =
-            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val manager = connectivityManager
+        val usesDefaultCallback = Build.VERSION.SDK_INT >= Build.VERSION_CODES.N
 
-        fun isOnline(): Boolean {
-            val network = connectivityManager.activeNetwork ?: return false
-            val caps = connectivityManager.getNetworkCapabilities(network) ?: return false
-            val hasInternet =
-                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
-            val validated =
-                caps.hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
-            return hasInternet && validated
-        }
-
-        trySend(isOnline())
+        trySend(isCurrentlyOnline())
 
         val callback = object : ConnectivityManager.NetworkCallback() {
-            override fun onAvailable(network: Network) {
-                trySend(isOnline())
-            }
-
-            override fun onLost(network: Network) {
-                trySend(isOnline())
-            }
-
             override fun onCapabilitiesChanged(
                 network: Network,
                 networkCapabilities: NetworkCapabilities
             ) {
-                trySend(isOnline())
+                val online = if (usesDefaultCallback) {
+                    networkCapabilities.hasUsableInternet()
+                } else {
+                    isCurrentlyOnline()
+                }
+                trySend(online)
+            }
+
+            override fun onLost(network: Network) {
+                val online = if (usesDefaultCallback) false else isCurrentlyOnline()
+                trySend(online)
             }
 
             override fun onUnavailable() {
@@ -56,19 +62,23 @@ class ConnectivityObserver @Inject constructor(
             }
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            connectivityManager.registerDefaultNetworkCallback(callback)
+        if (usesDefaultCallback) {
+            manager.registerDefaultNetworkCallback(callback)
         } else {
             val request = NetworkRequest.Builder()
                 .addCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)
                 .build()
-            connectivityManager.registerNetworkCallback(request, callback)
+            manager.registerNetworkCallback(request, callback)
         }
 
         awaitClose {
             runCatching {
-                connectivityManager.unregisterNetworkCallback(callback)
+                manager.unregisterNetworkCallback(callback)
             }
         }
     }.distinctUntilChanged()
+
+    private fun NetworkCapabilities.hasUsableInternet(): Boolean =
+        hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+            hasCapability(NetworkCapabilities.NET_CAPABILITY_VALIDATED)
 }

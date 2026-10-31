@@ -14,14 +14,15 @@ import com.mindInk.app.domain.usecase.auth.SignInWithGitHubUseCase
 import com.mindInk.app.domain.usecase.auth.SignInWithGoogleUseCase
 import com.mindInk.app.domain.usecase.auth.SignOutUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
@@ -52,31 +53,33 @@ class AuthViewModel @Inject constructor(
     private val _isOnline = MutableStateFlow(true)
     val isOnline: StateFlow<Boolean> = _isOnline.asStateFlow()
 
-    private var offlineDebounceJob: Job? = null
-
-    init {
-        viewModelScope.launch {
-            connectivityObserver.observe().collect { online ->
-                if (online) {
-                    offlineDebounceJob?.cancel()
-                    offlineDebounceJob = null
-                    _isOnline.value = true
-                } else {
-                    offlineDebounceJob?.cancel()
-                    offlineDebounceJob = launch {
-                        delay(1_200L)
-                        _isOnline.value = false
-                    }
-                }
-            }
-        }
-    }
+    private var connectivityJob: Job? = null
 
     private val _uiState = MutableStateFlow(AuthUiState())
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
     private val _errorEvents = Channel<AuthErrorReason>(Channel.BUFFERED)
     val errorEvents: Flow<AuthErrorReason> = _errorEvents.receiveAsFlow()
+
+    @OptIn(FlowPreview::class)
+    fun onAppStarted() {
+        if (connectivityObserver.isCurrentlyOnline()) {
+            _isOnline.value = true
+        }
+
+        connectivityJob?.cancel()
+        connectivityJob = viewModelScope.launch {
+            connectivityObserver.observe()
+                .debounce { online -> if (online) 0L else OFFLINE_DEBOUNCE_MS }
+                .collect { online -> _isOnline.value = online }
+        }
+    }
+
+
+    fun onAppStopped() {
+        connectivityJob?.cancel()
+        connectivityJob = null
+    }
 
     fun onGoogleClick(activity: Activity) {
         launchSignIn(AuthProvider.GOOGLE) { signInWithGoogleUseCase(activity) }
@@ -123,5 +126,9 @@ class AuthViewModel @Inject constructor(
                 _errorEvents.send(result.reason)
             }
         }
+    }
+
+    private companion object {
+        const val OFFLINE_DEBOUNCE_MS = 1_200L
     }
 }
