@@ -13,8 +13,7 @@ class UpdateArticleUseCase @Inject constructor(
         category: String,
         title: String,
         subtitle: String,
-        content: String,
-        linkUrl: String = ""
+        content: String
     ): UpdateArticleResult {
         val t = title.trim()
         val c = content.trim()
@@ -31,8 +30,7 @@ class UpdateArticleUseCase @Inject constructor(
             category = cat,
             title = t,
             subtitle = subtitle.trim(),
-            content = c,
-            linkUrl = linkUrl.trim()
+            content = c
         )
     }
 }

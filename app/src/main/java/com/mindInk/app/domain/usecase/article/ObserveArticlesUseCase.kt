@@ -7,6 +7,4 @@ class ObserveArticlesUseCase @Inject constructor(
     private val repository: ArticleRepository
 ) {
     operator fun invoke(limit: Long = 50) = repository.observeArticles(limit)
-
-    fun observeAll() = repository.observeAllArticles()
 }
