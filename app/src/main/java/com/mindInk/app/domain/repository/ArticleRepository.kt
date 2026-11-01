@@ -52,8 +52,6 @@ sealed interface LoadArticlesPageResult {
 interface ArticleRepository {
     fun observeArticles(limit: Long = 50): Flow<ObserveArticlesResult>
 
-    fun observeAllArticles(): Flow<ObserveArticlesResult>
-
     fun observeArticlesByAuthor(
         authorUid: String,
         limit: Long = 50
@@ -69,13 +67,11 @@ interface ArticleRepository {
     suspend fun createArticle(
         authorUid: String,
         authorName: String,
-        authorUsername: String,
         authorPhotoUrl: String?,
         category: String,
         title: String,
         subtitle: String,
-        content: String,
-        linkUrl: String
+        content: String
     ): CreateArticleResult
 
     suspend fun updateArticle(
@@ -84,8 +80,7 @@ interface ArticleRepository {
         category: String,
         title: String,
         subtitle: String,
-        content: String,
-        linkUrl: String
+        content: String
     ): UpdateArticleResult
 
     suspend fun updateAuthorName(

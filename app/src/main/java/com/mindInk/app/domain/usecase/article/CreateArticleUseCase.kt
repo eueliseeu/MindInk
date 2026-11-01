@@ -10,13 +10,11 @@ class CreateArticleUseCase @Inject constructor(
     suspend operator fun invoke(
         authorUid: String,
         authorName: String,
-        authorUsername: String,
         authorPhotoUrl: String?,
         category: String,
         title: String,
         subtitle: String,
-        content: String,
-        linkUrl: String = ""
+        content: String
     ): CreateArticleResult {
         val t = title.trim()
         val c = content.trim()
@@ -30,13 +28,11 @@ class CreateArticleUseCase @Inject constructor(
         return repository.createArticle(
             authorUid = authorUid,
             authorName = authorName,
-            authorUsername = authorUsername,
             authorPhotoUrl = authorPhotoUrl,
             category = cat,
             title = t,
             subtitle = subtitle.trim(),
-            content = c,
-            linkUrl = linkUrl.trim()
+            content = c
         )
     }
 }
