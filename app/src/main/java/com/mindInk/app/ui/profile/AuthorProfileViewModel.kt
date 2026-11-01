@@ -5,7 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.repository.LoadAccountSettingsResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
-import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
+import com.mindInk.app.domain.usecase.article.ObserveArticlesByAuthorUseCase
 import com.mindInk.app.domain.usecase.settings.LoadAccountSettingsUseCase
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -19,89 +19,83 @@ import javax.inject.Inject
 
 @HiltViewModel
 class AuthorProfileViewModel @Inject constructor(
-    private val observeArticles: ObserveArticlesUseCase,
+    private val observeArticlesByAuthor: ObserveArticlesByAuthorUseCase,
     private val loadAccountSettings: LoadAccountSettingsUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthorProfileUiState())
     val uiState: StateFlow<AuthorProfileUiState> = _uiState.asStateFlow()
 
-    private var observeJob: Job? = null
-    private var settingsJob: Job? = null
+    private var articlesJob: Job? = null
+    private var profileJob: Job? = null
     private var currentAuthorUid: String = ""
+    private var hasProfileName = false
 
     fun load(authorUid: String) {
         if (authorUid.isBlank()) return
-
-        if (currentAuthorUid == authorUid && observeJob?.isActive == true) {
-            return
-        }
+        if (currentAuthorUid == authorUid && articlesJob?.isActive == true) return
 
         currentAuthorUid = authorUid
-        observeJob?.cancel()
-        settingsJob?.cancel()
+        hasProfileName = false
+        articlesJob?.cancel()
+        profileJob?.cancel()
 
-        _uiState.update {
-            it.copy(
-                isLoading = true,
-                authorUid = authorUid,
-                githubUrl = "",
-                linkedinUrl = "",
-                errorMessage = null
-            )
-        }
+        _uiState.value = AuthorProfileUiState(authorUid = authorUid)
 
-        settingsJob = viewModelScope.launch {
+        profileJob = viewModelScope.launch {
             when (val result = loadAccountSettings(authorUid)) {
                 is LoadAccountSettingsResult.Success -> {
+                    val profile = result.settings
+                    hasProfileName = profile.name.isNotBlank()
                     _uiState.update { state ->
-                        if (state.authorUid != authorUid) state else state.copy(
-                            githubUrl = result.settings.github,
-                            linkedinUrl = result.settings.linkedin
-                        )
+                        if (state.authorUid != authorUid) {
+                            state
+                        } else {
+                            state.copy(
+                                authorName = if (hasProfileName) {
+                                    formatAuthorName(profile.name)
+                                } else {
+                                    state.authorName
+                                },
+                                authorPhotoUrl = profile.photoUrl ?: state.authorPhotoUrl,
+                                githubUrl = profile.github,
+                                linkedinUrl = profile.linkedin
+                            )
+                        }
                     }
                 }
                 is LoadAccountSettingsResult.Error -> Unit
             }
         }
 
-        observeJob = viewModelScope.launch {
-            observeArticles().collect { result ->
+        articlesJob = viewModelScope.launch {
+            observeArticlesByAuthor(authorUid).collect { result ->
                 when (result) {
                     is ObserveArticlesResult.Success -> {
-                        val list = result.articles.filter { it.authorUid == currentAuthorUid }
+                        val list = result.articles
                         val first = list.firstOrNull()
-                        _uiState.update {
-                            it.copy(
+                        _uiState.update { state ->
+                            state.copy(
                                 isLoading = false,
-                                authorName = formatAuthorName(first?.authorName)
-                                    .ifBlank { it.authorName },
-                                authorUsername = first?.authorUsername
-                                    ?.takeIf { username -> username.isNotBlank() }
-                                    ?: it.authorUsername,
-                                authorPhotoUrl = first?.authorPhotoUrl ?: it.authorPhotoUrl,
-                                totalStars = list.sumOf { article -> article.starCount },
-                                articles = list.map { article -> article.toCardUi() },
+                                authorName = if (hasProfileName) {
+                                    state.authorName
+                                } else {
+                                    formatAuthorName(first?.authorName)
+                                },
+                                authorPhotoUrl = state.authorPhotoUrl ?: first?.authorPhotoUrl,
+                                totalStars = list.sumOf { it.starCount },
+                                articles = list.map { it.toCardUi() },
                                 errorMessage = null
                             )
                         }
                     }
                     is ObserveArticlesResult.Error -> {
                         _uiState.update {
-                            it.copy(
-                                isLoading = false,
-                                errorMessage = result.message
-                            )
+                            it.copy(isLoading = false, errorMessage = result.message)
                         }
                     }
                 }
             }
         }
-    }
-
-    override fun onCleared() {
-        observeJob?.cancel()
-        settingsJob?.cancel()
-        super.onCleared()
     }
 }
