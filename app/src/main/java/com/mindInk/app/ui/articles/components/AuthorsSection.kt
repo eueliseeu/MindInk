@@ -15,31 +15,30 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.components.UserAvatar
-import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private val HorizontalPadding = 20.dp
-private val AvatarSize = 48.dp
+private val AvatarSize = 56.dp
 
 @Composable
 fun AuthorsSection(
+    title: String,
     authors: List<AuthorUi>,
-    onAuthorClick: (AuthorUi) -> Unit = {},
+    onAuthorClick: (AuthorUi) -> Unit,
     modifier: Modifier = Modifier
 ) {
     if (authors.isEmpty()) return
 
     Column(modifier = modifier.fillMaxWidth()) {
         Text(
-            text = "Autores",
+            text = title,
             color = MindInkWhite,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
+            fontSize = 18.sp,
+            fontWeight = FontWeight.SemiBold,
             modifier = Modifier.padding(horizontal = HorizontalPadding)
         )
 
@@ -54,18 +53,12 @@ fun AuthorsSection(
                 items = authors,
                 key = { it.uid }
             ) { author ->
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier
-                        .padding(vertical = 4.dp)
-                        .clickable { onAuthorClick(author) }
-                ) {
-                    UserAvatar(
-                        photoUrl = author.photoUrl,
-                        name = author.name,
-                        size = AvatarSize
-                    )
-                }
+                UserAvatar(
+                    photoUrl = author.photoUrl,
+                    name = author.name,
+                    size = AvatarSize,
+                    modifier = Modifier.clickable { onAuthorClick(author) }
+                )
             }
         }
     }

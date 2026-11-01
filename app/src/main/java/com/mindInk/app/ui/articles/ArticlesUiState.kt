@@ -5,6 +5,8 @@ import com.mindInk.app.ui.articles.model.AuthorUi
 import com.mindInk.app.ui.articles.model.MuralItemUi
 
 data class ArticlesUiState(
+
+    val favoriteAuthors: List<AuthorUi> = emptyList(),
     val isLoading: Boolean = true,
     val latestArticles: List<ArticleCardUi> = emptyList(),
     val exploreArticles: List<ArticleCardUi> = emptyList(),
