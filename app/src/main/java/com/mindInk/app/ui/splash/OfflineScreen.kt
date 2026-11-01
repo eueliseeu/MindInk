@@ -67,7 +67,7 @@ fun OfflineScreen() {
                 Spacer(modifier = Modifier.size(12.dp))
 
                 Text(
-                    text = " / MindInk.",
+                    text = "MindInk.",
                     color = MindInkWhite,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.SemiBold

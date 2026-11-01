@@ -80,7 +80,7 @@ fun AccountSettingsScreen(
             .navigationBarsPadding()
     ) {
         MindInkTopBar(
-            screenTitle = "/ Configurações",
+            screenTitle = "Configurações",
             user = user,
             onBack = onBack,
             showSearch = false,
