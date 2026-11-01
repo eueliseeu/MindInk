@@ -5,6 +5,8 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import com.mindInk.app.data.favorite.applyStarToFavorite
+import com.mindInk.app.data.favorite.favoriteAuthors
 import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.ArticleRepository
 import com.mindInk.app.domain.repository.ArticlesPage
@@ -263,24 +265,40 @@ class ArticleRepositoryImpl @Inject constructor(
     ): ToggleStarResult {
         return try {
             firestore.runTransaction { transaction ->
-                val ref = articles.document(articleId)
-                val snap = transaction.get(ref)
-                val starredBy = (snap.get("starredBy") as? List<*>)
+                val articleRef = articles.document(articleId)
+                val article = transaction.get(articleRef)
+
+                val favorite = article.getString("authorUid")
+                    ?.takeIf { it.isNotBlank() && it != uid }
+                    ?.let { authorUid ->
+                        val ref = firestore.favoriteAuthors(uid).document(authorUid)
+                        ref to transaction.get(ref)
+                    }
+
+                val starredBy = (article.get("starredBy") as? List<*>)
                     ?.filterIsInstance<String>()
-                    ?.toMutableList()
-                    ?: mutableListOf()
-                if (starredBy.contains(uid)) {
-                    starredBy.remove(uid)
-                } else {
-                    starredBy.add(uid)
-                }
+                    .orEmpty()
+                    .toMutableList()
+                val starred = !starredBy.remove(uid)
+                if (starred) starredBy.add(uid)
+
                 transaction.update(
-                    ref,
+                    articleRef,
                     mapOf(
                         "starredBy" to starredBy,
                         "starCount" to starredBy.size
                     )
                 )
+
+                favorite?.let { (ref, snapshot) ->
+                    transaction.applyStarToFavorite(
+                        favoriteRef = ref,
+                        favorite = snapshot,
+                        article = article,
+                        starred = starred,
+                        now = System.currentTimeMillis()
+                    )
+                }
             }.await()
             ToggleStarResult.Success
         } catch (e: CancellationException) {
