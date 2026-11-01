@@ -39,20 +39,29 @@ class ArticleRepositoryImpl @Inject constructor(
 
     override fun observeArticles(limit: Long): Flow<ObserveArticlesResult> =
         observeArticlesQuery(
-            articles.orderBy("createdAt", Query.Direction.DESCENDING).limit(limit)
+            query = articles.orderBy("createdAt", Query.Direction.DESCENDING).limit(limit),
+            errorMessage = "Falha ao carregar artigos."
         )
 
-    override fun observeAllArticles(): Flow<ObserveArticlesResult> =
-        observeArticlesQuery(articles.orderBy("createdAt", Query.Direction.DESCENDING))
+    override fun observeArticlesByAuthor(
+        authorUid: String,
+        limit: Long
+    ): Flow<ObserveArticlesResult> =
+        observeArticlesQuery(
+            query = articles
+                .whereEqualTo("authorUid", authorUid)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit),
+            errorMessage = "Falha ao carregar artigos do autor."
+        )
 
-    private fun observeArticlesQuery(query: Query): Flow<ObserveArticlesResult> = callbackFlow {
+    private fun observeArticlesQuery(
+        query: Query,
+        errorMessage: String
+    ): Flow<ObserveArticlesResult> = callbackFlow {
         val registration = query.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                trySend(
-                    ObserveArticlesResult.Error(
-                        error.message ?: "Falha ao carregar artigos."
-                    )
-                )
+                trySend(ObserveArticlesResult.Error(error.message ?: errorMessage))
                 return@addSnapshotListener
             }
             val list = snapshot?.documents
@@ -60,31 +69,6 @@ class ArticleRepositoryImpl @Inject constructor(
                 .orEmpty()
             trySend(ObserveArticlesResult.Success(list))
         }
-        awaitClose { registration.remove() }
-    }
-
-    override fun observeArticlesByAuthor(
-        authorUid: String,
-        limit: Long
-    ): Flow<ObserveArticlesResult> = callbackFlow {
-        val registration = articles
-            .whereEqualTo("authorUid", authorUid)
-            .orderBy("createdAt", Query.Direction.DESCENDING)
-            .limit(limit)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(
-                        ObserveArticlesResult.Error(
-                            error.message ?: "Falha ao carregar artigos do autor."
-                        )
-                    )
-                    return@addSnapshotListener
-                }
-                val list = snapshot?.documents
-                    ?.mapNotNull { it.toArticle() }
-                    .orEmpty()
-                trySend(ObserveArticlesResult.Success(list))
-            }
         awaitClose { registration.remove() }
     }
 
@@ -137,13 +121,11 @@ class ArticleRepositoryImpl @Inject constructor(
     override suspend fun createArticle(
         authorUid: String,
         authorName: String,
-        authorUsername: String,
         authorPhotoUrl: String?,
         category: String,
         title: String,
         subtitle: String,
-        content: String,
-        linkUrl: String
+        content: String
     ): CreateArticleResult {
         return try {
             val now = System.currentTimeMillis()
@@ -151,13 +133,11 @@ class ArticleRepositoryImpl @Inject constructor(
             val dto = ArticleDto(
                 authorUid = authorUid,
                 authorName = authorName,
-                authorUsername = authorUsername,
                 authorPhotoUrl = authorPhotoUrl,
                 category = category,
                 title = title,
                 subtitle = subtitle,
                 content = content,
-                linkUrl = linkUrl,
                 starredBy = emptyList(),
                 starCount = 0,
                 viewCount = 0,
@@ -179,8 +159,7 @@ class ArticleRepositoryImpl @Inject constructor(
         category: String,
         title: String,
         subtitle: String,
-        content: String,
-        linkUrl: String
+        content: String
     ): UpdateArticleResult {
         return try {
             val ref = articles.document(articleId)
@@ -195,7 +174,6 @@ class ArticleRepositoryImpl @Inject constructor(
                     "title" to title,
                     "subtitle" to subtitle,
                     "content" to content,
-                    "linkUrl" to linkUrl,
                     "updatedAt" to System.currentTimeMillis()
                 ),
                 SetOptions.merge()

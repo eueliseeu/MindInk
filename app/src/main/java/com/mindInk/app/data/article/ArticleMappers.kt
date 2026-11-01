@@ -10,13 +10,11 @@ internal fun DocumentSnapshot.toArticle(): Article? {
         id = id,
         authorUid = data.authorUid,
         authorName = data.authorName,
-        authorUsername = data.authorUsername,
         authorPhotoUrl = data.authorPhotoUrl,
         category = data.category,
         title = data.title,
         subtitle = data.subtitle,
         content = data.content,
-        linkUrl = data.linkUrl,
         starredBy = data.starredBy,
         starCount = data.starCount,
         viewCount = data.viewCount,
@@ -24,20 +22,3 @@ internal fun DocumentSnapshot.toArticle(): Article? {
         updatedAt = data.updatedAt
     )
 }
-
-internal fun Article.toDto(): ArticleDto = ArticleDto(
-    authorUid = authorUid,
-    authorName = authorName,
-    authorUsername = authorUsername,
-    authorPhotoUrl = authorPhotoUrl,
-    category = category,
-    title = title,
-    subtitle = subtitle,
-    content = content,
-    linkUrl = linkUrl,
-    starredBy = starredBy,
-    starCount = starCount,
-    viewCount = viewCount,
-    createdAt = createdAt,
-    updatedAt = updatedAt
-)
