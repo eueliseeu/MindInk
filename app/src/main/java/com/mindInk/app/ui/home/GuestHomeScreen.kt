@@ -112,7 +112,7 @@ fun GuestHomeScreen(
         ) {
 
             MindInkTopBar(
-                screenTitle = "/ MindInk.",
+                screenTitle = "MindInk.",
                 user = null,
                 showSearch = false,
                 showUserMenu = false,

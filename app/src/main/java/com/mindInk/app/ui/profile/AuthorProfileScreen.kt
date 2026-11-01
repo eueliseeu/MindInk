@@ -79,7 +79,7 @@ fun AuthorProfileScreen(
             .navigationBarsPadding()
     ) {
         MindInkTopBar(
-            screenTitle = "/ $firstName",
+            screenTitle = "$firstName",
             user = user,
             onBack = onBack,
             showSearch = false,

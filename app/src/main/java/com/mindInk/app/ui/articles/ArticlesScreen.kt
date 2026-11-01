@@ -123,7 +123,7 @@ fun ArticlesScreen(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Olá, $displayName!",
+                            text = "Olá, $displayName",
                             color = MindInkWhite,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
