@@ -39,6 +39,7 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.AuthUser
+import com.mindInk.app.ui.articles.components.AuthorsSection
 import com.mindInk.app.ui.articles.components.ContinueReadingSection
 import com.mindInk.app.ui.articles.components.MuralSection
 import com.mindInk.app.ui.articles.model.ArticleCardUi
@@ -123,7 +124,7 @@ fun ArticlesScreen(
                         Spacer(modifier = Modifier.height(4.dp))
 
                         Text(
-                            text = "Olá, $displayName",
+                            text = "Olá, $displayName!",
                             color = MindInkWhite,
                             fontSize = 28.sp,
                             fontWeight = FontWeight.Bold
@@ -190,6 +191,18 @@ fun ArticlesScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
+                    }
+                }
+
+                if (state.favoriteAuthors.isNotEmpty()) {
+                    item(key = "favorite_authors") {
+                        Spacer(modifier = Modifier.height(28.dp))
+
+                        AuthorsSection(
+                            title = "Autores favoritos",
+                            authors = state.favoriteAuthors,
+                            onAuthorClick = onAuthorClick
+                        )
                     }
                 }
 
