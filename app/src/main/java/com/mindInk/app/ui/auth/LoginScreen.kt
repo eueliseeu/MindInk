@@ -97,7 +97,7 @@ fun LoginScreen(
             Spacer(modifier = Modifier.height(8.dp))
 
             Text(
-                text = "Acesse sua conta",
+                text = "Acessar sua conta",
                 color = MindInkWhite.copy(alpha = 0.75f),
                 fontSize = 15.sp,
                 textAlign = TextAlign.Center
