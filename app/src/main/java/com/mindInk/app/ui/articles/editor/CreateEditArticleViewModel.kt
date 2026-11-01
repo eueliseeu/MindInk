@@ -128,11 +128,7 @@ class CreateEditArticleViewModel @Inject constructor(
         }
         if (state.isSaving) return
 
-        val authorName = formatAuthorName(
-            user.displayName ?: user.email?.substringBefore("@")
-        )
-        val authorUsername = user.email?.substringBefore("@")
-            ?: user.uid.take(8)
+        val authorName = formatAuthorName(user.displayName)
 
         viewModelScope.launch {
             _uiState.update { it.copy(isSaving = true, errorMessage = null) }
@@ -164,7 +160,6 @@ class CreateEditArticleViewModel @Inject constructor(
                     val result = createArticle(
                         authorUid = user.uid,
                         authorName = authorName,
-                        authorUsername = authorUsername,
                         authorPhotoUrl = user.photoUrl,
                         category = state.category,
                         title = state.title,

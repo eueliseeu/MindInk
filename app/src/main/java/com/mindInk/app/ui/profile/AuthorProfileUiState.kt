@@ -6,7 +6,6 @@ data class AuthorProfileUiState(
     val isLoading: Boolean = true,
     val authorUid: String = "",
     val authorName: String = "",
-    val authorUsername: String = "",
     val authorPhotoUrl: String? = null,
     val githubUrl: String = "",
     val linkedinUrl: String = "",

@@ -5,6 +5,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.ConnectivityObserver
 import com.mindInk.app.domain.model.AuthProvider
+import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.domain.repository.AuthErrorReason
 import com.mindInk.app.domain.repository.SignInResult
 import com.mindInk.app.domain.usecase.auth.DiscardPendingLinkUseCase
@@ -13,6 +14,7 @@ import com.mindInk.app.domain.usecase.auth.ObserveAuthStateUseCase
 import com.mindInk.app.domain.usecase.auth.SignInWithGitHubUseCase
 import com.mindInk.app.domain.usecase.auth.SignInWithGoogleUseCase
 import com.mindInk.app.domain.usecase.auth.SignOutUseCase
+import com.mindInk.app.domain.usecase.profile.EnsureUserProfileUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -24,6 +26,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -32,6 +35,7 @@ import javax.inject.Inject
 @HiltViewModel
 class AuthViewModel @Inject constructor(
     observeAuthStateUseCase: ObserveAuthStateUseCase,
+    private val ensureUserProfile: EnsureUserProfileUseCase,
     private val signInWithGoogleUseCase: SignInWithGoogleUseCase,
     private val signInWithGitHubUseCase: SignInWithGitHubUseCase,
     private val linkPendingAccountUseCase: LinkPendingAccountUseCase,
@@ -40,7 +44,10 @@ class AuthViewModel @Inject constructor(
     private val connectivityObserver: ConnectivityObserver
 ) : ViewModel() {
 
+    private var ensuredProfileUid: String? = null
+
     val sessionState: StateFlow<SessionState> = observeAuthStateUseCase()
+        .onEach { user -> user?.let(::ensureProfileOnce) }
         .map { user ->
             if (user != null) SessionState.Authenticated(user) else SessionState.Unauthenticated
         }
@@ -75,7 +82,6 @@ class AuthViewModel @Inject constructor(
         }
     }
 
-
     fun onAppStopped() {
         connectivityJob?.cancel()
         connectivityJob = null
@@ -101,6 +107,13 @@ class AuthViewModel @Inject constructor(
 
     fun onSignOutClick() {
         viewModelScope.launch { signOutUseCase() }
+    }
+
+    private fun ensureProfileOnce(user: AuthUser) {
+        if (ensuredProfileUid == user.uid) return
+        viewModelScope.launch {
+            if (ensureUserProfile(user)) ensuredProfileUid = user.uid
+        }
     }
 
     private fun launchSignIn(provider: AuthProvider, block: suspend () -> SignInResult) {
