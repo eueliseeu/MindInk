@@ -15,7 +15,6 @@ internal fun DocumentSnapshot.toArticle(): Article? {
         title = data.title,
         subtitle = data.subtitle,
         content = data.content,
-        starredBy = data.starredBy,
         starCount = data.starCount,
         viewCount = data.viewCount,
         createdAt = data.createdAt,

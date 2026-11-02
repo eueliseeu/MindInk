@@ -5,8 +5,6 @@ import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
-import com.mindInk.app.data.favorite.applyStarToFavorite
-import com.mindInk.app.data.favorite.favoriteAuthors
 import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.ArticleRepository
 import com.mindInk.app.domain.repository.ArticlesPage
@@ -15,7 +13,6 @@ import com.mindInk.app.domain.repository.DeleteArticleResult
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.repository.RecordArticleViewResult
-import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.repository.UpdateArticleResult
 import com.mindInk.app.domain.repository.UpdateAuthorArticlesResult
 import kotlinx.coroutines.CancellationException
@@ -26,7 +23,6 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val COLLECTION = "articles"
 private const val VIEWS_SUBCOLLECTION = "views"
 private const val AUTHOR_NAME_BATCH_SIZE = 450L
 
@@ -35,7 +31,7 @@ class ArticleRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ArticleRepository {
 
-    private val articles = firestore.collection(COLLECTION)
+    private val articles = firestore.collection(ARTICLES_COLLECTION)
 
     override fun observeArticles(limit: Long): Flow<ObserveArticlesResult> =
         observeArticlesQuery(
@@ -46,27 +42,14 @@ class ArticleRepositoryImpl @Inject constructor(
     override fun observeArticlesByAuthor(
         authorUid: String,
         limit: Long
-    ): Flow<ObserveArticlesResult> = callbackFlow {
-        val registration = articles
-            .whereEqualTo("authorUid", authorUid)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    trySend(
-                        ObserveArticlesResult.Error(
-                            error.message ?: "Falha ao carregar artigos do autor."
-                        )
-                    )
-                    return@addSnapshotListener
-                }
-                val list = snapshot?.documents
-                    ?.mapNotNull { it.toArticle() }
-                    .orEmpty()
-                    .sortedByDescending { it.createdAt }
-                    .take(limit.toInt().coerceAtLeast(0))
-                trySend(ObserveArticlesResult.Success(list))
-            }
-        awaitClose { registration.remove() }
-    }
+    ): Flow<ObserveArticlesResult> =
+        observeArticlesQuery(
+            query = articles
+                .whereEqualTo("authorUid", authorUid)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit),
+            errorMessage = "Falha ao carregar artigos do autor."
+        )
 
     private fun observeArticlesQuery(
         query: Query,
@@ -151,7 +134,6 @@ class ArticleRepositoryImpl @Inject constructor(
                 title = title,
                 subtitle = subtitle,
                 content = content,
-                starredBy = emptyList(),
                 starCount = 0,
                 viewCount = 0,
                 createdAt = now,
@@ -247,55 +229,6 @@ class ArticleRepositoryImpl @Inject constructor(
             throw e
         } catch (e: Exception) {
             DeleteArticleResult.Error(e.message ?: "Não foi possível apagar o artigo.")
-        }
-    }
-
-    override suspend fun toggleStar(
-        articleId: String,
-        uid: String
-    ): ToggleStarResult {
-        return try {
-            firestore.runTransaction { transaction ->
-                val articleRef = articles.document(articleId)
-                val article = transaction.get(articleRef)
-
-                val favorite = article.getString("authorUid")
-                    ?.takeIf { it.isNotBlank() && it != uid }
-                    ?.let { authorUid ->
-                        val ref = firestore.favoriteAuthors(uid).document(authorUid)
-                        ref to transaction.get(ref)
-                    }
-
-                val starredBy = (article.get("starredBy") as? List<*>)
-                    ?.filterIsInstance<String>()
-                    .orEmpty()
-                    .toMutableList()
-                val starred = !starredBy.remove(uid)
-                if (starred) starredBy.add(uid)
-
-                transaction.update(
-                    articleRef,
-                    mapOf(
-                        "starredBy" to starredBy,
-                        "starCount" to starredBy.size
-                    )
-                )
-
-                favorite?.let { (ref, snapshot) ->
-                    transaction.applyStarToFavorite(
-                        favoriteRef = ref,
-                        favorite = snapshot,
-                        article = article,
-                        starred = starred,
-                        now = System.currentTimeMillis()
-                    )
-                }
-            }.await()
-            ToggleStarResult.Success
-        } catch (e: CancellationException) {
-            throw e
-        } catch (e: Exception) {
-            ToggleStarResult.Error(e.message ?: "Não foi possível atualizar a estrela.")
         }
     }
 
