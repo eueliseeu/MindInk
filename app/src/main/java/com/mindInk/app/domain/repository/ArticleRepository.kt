@@ -28,11 +28,6 @@ sealed interface ObserveArticlesResult {
     data class Error(val message: String) : ObserveArticlesResult
 }
 
-sealed interface ToggleStarResult {
-    data object Success : ToggleStarResult
-    data class Error(val message: String) : ToggleStarResult
-}
-
 sealed interface RecordArticleViewResult {
     data class Success(val viewCount: Int) : RecordArticleViewResult
     data class Error(val message: String) : RecordArticleViewResult
@@ -92,11 +87,6 @@ interface ArticleRepository {
         articleId: String,
         requesterUid: String
     ): DeleteArticleResult
-
-    suspend fun toggleStar(
-        articleId: String,
-        uid: String
-    ): ToggleStarResult
 
     suspend fun recordView(
         articleId: String,
