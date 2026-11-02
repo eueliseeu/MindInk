@@ -25,6 +25,7 @@ import com.mindInk.app.ui.theme.MindInkWhite
 fun MuralSection(
     items: List<MuralItemUi>,
     onNewArticleClick: (MuralItemUi.NewArticleFromFavorite) -> Unit,
+    onStarReceivedClick: (MuralItemUi.StarReceived) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(
@@ -42,7 +43,7 @@ fun MuralSection(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Estrelas recebidas e novidades dos seus autores",
+            text = "Estrelas nos seus artigos e novidades dos autores que você curte.",
             color = MindInkMuted,
             fontSize = 13.sp,
             lineHeight = 18.sp
@@ -58,19 +59,17 @@ fun MuralSection(
             )
         } else {
             items.forEach { item ->
-                val clickable = item is MuralItemUi.NewArticleFromFavorite
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .then(
-                            if (clickable) {
-                                Modifier.clickable {
-                                    onNewArticleClick(item as MuralItemUi.NewArticleFromFavorite)
-                                }
-                            } else {
-                                Modifier
+                        .clickable {
+                            when (item) {
+                                is MuralItemUi.NewArticleFromFavorite ->
+                                    onNewArticleClick(item)
+                                is MuralItemUi.StarReceived ->
+                                    onStarReceivedClick(item)
                             }
-                        )
+                        }
                         .padding(vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

@@ -152,6 +152,15 @@ fun ArticlesScreen(
                                     createdAt = item.sortKey
                                 )
                             )
+                        },
+                        onStarReceivedClick = { item ->
+                            onAuthorClick(
+                                AuthorUi(
+                                    uid = item.actorUid,
+                                    name = item.actorName,
+                                    photoUrl = item.actorPhotoUrl
+                                )
+                            )
                         }
                     )
                 }

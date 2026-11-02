@@ -1,8 +1,8 @@
 package com.mindInk.app.data.article
 
-import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
+import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import com.mindInk.app.data.favorite.applyStarToFavorite
@@ -46,14 +46,27 @@ class ArticleRepositoryImpl @Inject constructor(
     override fun observeArticlesByAuthor(
         authorUid: String,
         limit: Long
-    ): Flow<ObserveArticlesResult> =
-        observeArticlesQuery(
-            query = articles
-                .whereEqualTo("authorUid", authorUid)
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .limit(limit),
-            errorMessage = "Falha ao carregar artigos do autor."
-        )
+    ): Flow<ObserveArticlesResult> = callbackFlow {
+        val registration = articles
+            .whereEqualTo("authorUid", authorUid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(
+                        ObserveArticlesResult.Error(
+                            error.message ?: "Falha ao carregar artigos do autor."
+                        )
+                    )
+                    return@addSnapshotListener
+                }
+                val list = snapshot?.documents
+                    ?.mapNotNull { it.toArticle() }
+                    .orEmpty()
+                    .sortedByDescending { it.createdAt }
+                    .take(limit.toInt().coerceAtLeast(0))
+                trySend(ObserveArticlesResult.Success(list))
+            }
+        awaitClose { registration.remove() }
+    }
 
     private fun observeArticlesQuery(
         query: Query,
