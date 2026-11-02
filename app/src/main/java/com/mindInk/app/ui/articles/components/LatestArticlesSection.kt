@@ -30,12 +30,7 @@ import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkWhite
 
 private val HorizontalPadding = 20.dp
-
-// Igual à margem lateral: o próximo card começa exatamente fora da tela, sem faixa aparecendo
 private val CardSpacing = HorizontalPadding
-
-// Largura do card em relação à área entre as margens: 1f = card ocupa a tela inteira.
-// Abaixo de 1f o próximo card passa a aparecer cortado na lateral (ex.: 0.8f)
 private const val CardWidthFraction = 1f
 
 @Composable

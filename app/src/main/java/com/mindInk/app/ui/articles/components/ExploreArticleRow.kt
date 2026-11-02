@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -30,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.mindInk.app.ui.articles.formatCount
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.postedAgoText
+import com.mindInk.app.ui.articles.stars.LocalStarredArticleIds
 import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.theme.MindInkBorder
 import com.mindInk.app.ui.theme.MindInkMuted
@@ -46,6 +46,8 @@ fun ExploreArticleRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isStarred = currentUid != null && article.id in LocalStarredArticleIds.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -146,11 +148,7 @@ fun ExploreArticleRow(
                 Icon(
                     imageVector = Icons.Outlined.Star,
                     contentDescription = null,
-                    tint = if (currentUid != null && currentUid in article.starredBy) {
-                        MindInkStar
-                    } else {
-                        MindInkWhite
-                    },
+                    tint = if (isStarred) MindInkStar else MindInkWhite,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))

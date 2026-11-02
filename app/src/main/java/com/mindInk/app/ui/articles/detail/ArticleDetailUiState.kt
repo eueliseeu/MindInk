@@ -6,9 +6,7 @@ data class ArticleDetailUiState(
     val isLoading: Boolean = true,
     val article: Article? = null,
     val currentUid: String? = null,
+    val isStarredByMe: Boolean = false,
     val errorMessage: String? = null,
     val toastMessage: String? = null
-) {
-    val isStarredByMe: Boolean
-        get() = currentUid != null && article?.starredBy?.contains(currentUid) == true
-}
+)
