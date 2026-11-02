@@ -14,12 +14,15 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
+import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -32,6 +35,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
@@ -45,12 +49,14 @@ import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.formatCount
 import com.mindInk.app.ui.articles.model.ArticleCardUi
-import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.components.UserAvatar
-import com.mindInk.app.ui.theme.MindInkBorder
+import com.mindInk.app.ui.theme.MindInkBackground
 import com.mindInk.app.ui.theme.MindInkMuted
-import com.mindInk.app.ui.theme.MindInkSurface
+import com.mindInk.app.ui.theme.MindInkStar
 import com.mindInk.app.ui.theme.MindInkWhite
+
+private val BandHeight = 220.dp
+private val AvatarSize = 96.dp
 
 @Composable
 fun AuthorProfileScreen(
@@ -64,13 +70,22 @@ fun AuthorProfileScreen(
     viewModel: AuthorProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
+    val isOwnProfile = authorUid == user.uid
 
     LaunchedEffect(authorUid) {
         viewModel.load(authorUid)
     }
 
-    val titleName = state.authorName.ifBlank { "Autor" }
-    val firstName = titleName.substringBefore(" ").ifBlank { titleName }
+    val displayName = state.authorName.ifBlank {
+        if (isOwnProfile) {
+            user.displayName?.takeIf { it.isNotBlank() } ?: "Você"
+        } else {
+            "Autor"
+        }
+    }
+    val shortName = displayName.substringBefore(" ").ifBlank { displayName }
+    val totalViews = state.articles.sumOf { it.viewCount }
+    val totalStars = state.articles.sumOf { it.starCount }
 
     Column(
         modifier = Modifier
@@ -78,17 +93,6 @@ fun AuthorProfileScreen(
             .background(MaterialTheme.colorScheme.background)
             .navigationBarsPadding()
     ) {
-        MindInkTopBar(
-            screenTitle = "$firstName",
-            user = user,
-            onBack = onBack,
-            showSearch = false,
-            showUserMenu = true,
-            onSignOut = onSignOut,
-            onProfileClick = onProfileClick,
-            onSettingsClick = onSettingsClick
-        )
-
         when {
             state.isLoading -> {
                 Box(
@@ -100,11 +104,24 @@ fun AuthorProfileScreen(
             }
 
             state.errorMessage != null && state.articles.isEmpty() -> {
-                Text(
-                    text = state.errorMessage ?: "Erro",
-                    color = MindInkMuted,
-                    modifier = Modifier.padding(20.dp)
-                )
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .padding(20.dp)
+                ) {
+                    IconButton(onClick = onBack) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                            contentDescription = "Voltar",
+                            tint = MindInkWhite
+                        )
+                    }
+                    Text(
+                        text = state.errorMessage ?: "Erro",
+                        color = MindInkMuted
+                    )
+                }
             }
 
             else -> {
@@ -113,28 +130,72 @@ fun AuthorProfileScreen(
                     contentPadding = PaddingValues(bottom = 32.dp)
                 ) {
                     item(key = "header") {
-                        ProfileHeader(
-                            name = state.authorName,
-                            photoUrl = state.authorPhotoUrl,
+                        StandardProfileHeader(
+                            name = displayName,
+                            photoUrl = state.authorPhotoUrl ?: user.photoUrl.takeIf { isOwnProfile },
                             githubUrl = state.githubUrl,
                             linkedinUrl = state.linkedinUrl,
-                            totalStars = state.totalStars
+                            isOwnProfile = isOwnProfile,
+                            onBack = onBack
                         )
                     }
 
                     item(key = "section_title") {
-                        Text(
-                            text = "Artigos de ${state.authorName}",
-                            color = MindInkWhite,
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(
-                                start = 20.dp,
-                                end = 20.dp,
-                                top = 28.dp,
-                                bottom = 12.dp
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = if (isOwnProfile) {
+                                    "Meus artigos"
+                                } else {
+                                    "Artigos de $shortName"
+                                },
+                                color = MindInkWhite,
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                modifier = Modifier.weight(1f)
                             )
-                        )
+
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Visibility,
+                                        contentDescription = null,
+                                        tint = MindInkMuted,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = formatCount(totalViews),
+                                        color = MindInkMuted,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(
+                                        imageVector = Icons.Outlined.Star,
+                                        contentDescription = null,
+                                        tint = MindInkStar,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = formatCount(totalStars),
+                                        color = MindInkMuted,
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Medium
+                                    )
+                                }
+                            }
+                        }
                     }
 
                     if (state.articles.isEmpty()) {
@@ -165,60 +226,69 @@ fun AuthorProfileScreen(
 }
 
 @Composable
-private fun ProfileHeader(
+fun StandardProfileHeader(
     name: String,
     photoUrl: String?,
     githubUrl: String,
     linkedinUrl: String,
-    totalStars: Int
+    isOwnProfile: Boolean = false,
+    onBack: (() -> Unit)? = null
 ) {
-    val avatarSize = 128.dp
-    val bandY = 88.dp
     val uriHandler = LocalUriHandler.current
-    val githubLink = normalizeSocialProfileUrl(githubUrl, "https://github.com")
-    val linkedinLink = normalizeSocialProfileUrl(
-        linkedinUrl,
-        "https://www.linkedin.com/in"
-    )
+    val githubLink = normalizeSocialProfileUrl(githubUrl, "github")
+    val linkedinLink = normalizeSocialProfileUrl(linkedinUrl, "linkedin")
+    val overlap = AvatarSize / 2
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(bandY + avatarSize / 2 + 8.dp)
+                .height(BandHeight + overlap)
         ) {
-            Box(
+            Image(
+                painter = painterResource(id = R.drawable.profile_image),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .height(bandY)
-                    .background(MaterialTheme.colorScheme.background)
+                    .height(BandHeight)
+                    .align(Alignment.TopCenter)
+                    .zIndex(0f)
             )
+
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(start = 8.dp, top = 4.dp)
+                        .align(Alignment.TopStart)
+                        .zIndex(3f)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = MindInkWhite
+                    )
+                }
+            }
 
             Box(
                 modifier = Modifier
+                    .fillMaxWidth()
+                    .height(overlap)
                     .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .height(avatarSize / 2 + 8.dp)
-                    .background(MindInkSurface)
-            )
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .padding(top = bandY)
-                    .height(1.dp)
-                    .background(MindInkBorder.copy(alpha = 0.45f))
+                    .background(MindInkBackground)
+                    .zIndex(1f)
             )
 
             UserAvatar(
                 photoUrl = photoUrl,
                 name = name,
-                size = avatarSize,
+                size = AvatarSize,
                 modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .padding(top = bandY - avatarSize / 2)
+                    .align(Alignment.BottomStart)
+                    .padding(start = 20.dp)
                     .zIndex(2f)
             )
         }
@@ -226,22 +296,31 @@ private fun ProfileHeader(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(MindInkSurface)
-                .padding(top = 12.dp, bottom = 24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 8.dp)
         ) {
-            Text(
-                text = name,
-                color = MindInkWhite,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = name,
+                    color = MindInkWhite,
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold
+                )
+                if (isOwnProfile) {
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "(me)",
+                        color = MindInkMuted,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
+                    )
+                }
+            }
 
             Spacer(modifier = Modifier.height(4.dp))
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = "Escritor",
+                    text = "Escritor Verificado",
                     color = MindInkMuted,
                     fontSize = 13.sp
                 )
@@ -256,15 +335,15 @@ private fun ProfileHeader(
 
             if (githubLink != null || linkedinLink != null) {
                 Spacer(modifier = Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     if (githubLink != null) {
                         IconButton(
                             onClick = { uriHandler.openUri(githubLink) },
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Image(
                                 painter = painterResource(R.drawable.ic_mindink_github),
-                                contentDescription = "Abrir GitHub",
+                                contentDescription = "GitHub",
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -272,35 +351,17 @@ private fun ProfileHeader(
                     if (linkedinLink != null) {
                         IconButton(
                             onClick = { uriHandler.openUri(linkedinLink) },
-                            modifier = Modifier.size(40.dp)
+                            modifier = Modifier.size(36.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Rounded.Link,
-                                contentDescription = "Abrir LinkedIn",
+                                contentDescription = "LinkedIn",
                                 tint = MindInkWhite,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
                     }
                 }
-            }
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(
-                    imageVector = Icons.Rounded.Star,
-                    contentDescription = null,
-                    tint = MindInkWhite,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = formatCount(totalStars),
-                    color = MindInkWhite,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
-                )
             }
         }
     }

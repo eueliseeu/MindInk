@@ -1,4 +1,3 @@
-
 package com.mindInk.app.ui.components
 
 import androidx.compose.foundation.BorderStroke
@@ -58,6 +57,8 @@ private val AvatarSize = 42.dp
 private val TopBarTopPadding = 24.dp
 private val TopBarBottomPadding = 12.dp
 private val MenuGap = 8.dp
+
+private const val EVENT_AVATAR_BORDER_ENABLED = true
 
 @Composable
 fun MindInkTopBar(
@@ -141,6 +142,7 @@ fun MindInkTopBar(
                     photoUrl = user.photoUrl,
                     name = user.displayName,
                     size = AvatarSize,
+                    showEventBorder = EVENT_AVATAR_BORDER_ENABLED,
                     modifier = Modifier
                         .clip(CircleShape)
                         .clickable(
@@ -183,16 +185,9 @@ fun MindInkTopBar(
                                     )
                                 )
 
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .height(1.dp)
-                                        .background(MindInkBorder)
-                                )
-
                                 if (onProfileClick != null) {
                                     Text(
-                                        text = "Perfil",
+                                        text = "Meu perfil",
                                         color = MindInkWhite,
                                         fontSize = 14.sp,
                                         modifier = Modifier
