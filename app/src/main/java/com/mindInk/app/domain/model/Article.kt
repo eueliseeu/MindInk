@@ -9,7 +9,6 @@ data class Article(
     val title: String,
     val subtitle: String = "",
     val content: String,
-    val starredBy: List<String> = emptyList(),
     val starCount: Int = 0,
     val viewCount: Int = 0,
     val createdAt: Long,
@@ -20,7 +19,4 @@ data class Article(
         if (text.length <= maxChars) return text
         return text.take(maxChars).trimEnd() + "…"
     }
-
-    fun isStarredBy(uid: String?): Boolean =
-        uid != null && starredBy.contains(uid)
 }
