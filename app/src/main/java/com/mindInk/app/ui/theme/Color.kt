@@ -18,3 +18,18 @@ val MindInkRedDark = Color(0xFFB71C1C)
 val MindInkError = Color(0xFFFF6B6B)
 
 val MindInkStar = Color(0xFFFFD54F)
+
+val EventBorderBlue = Color(0xFF4285F4)
+val EventBorderGreen = Color(0xFF0F9D58)
+val EventBorderGray = Color(0xFF696969)
+val EventBorderRed = Color(0xFFDB4437)
+val EventBorderYellow = Color(0xFFF4B400)
+
+val EventBorderColors = listOf(
+    EventBorderBlue,
+    EventBorderGreen,
+    EventBorderGray,
+    EventBorderRed,
+    EventBorderYellow,
+    EventBorderBlue
+)
