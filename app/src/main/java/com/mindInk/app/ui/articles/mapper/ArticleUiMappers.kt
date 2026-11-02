@@ -13,6 +13,5 @@ fun Article.toCardUi(): ArticleCardUi = ArticleCardUi(
     authorPhotoUrl = authorPhotoUrl,
     starCount = starCount,
     viewCount = viewCount,
-    starredBy = starredBy,
     createdAt = createdAt
 )

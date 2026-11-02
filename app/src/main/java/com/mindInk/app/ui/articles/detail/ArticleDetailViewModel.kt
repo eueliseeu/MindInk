@@ -12,7 +12,9 @@ import com.mindInk.app.domain.usecase.article.ToggleStarUseCase
 import com.mindInk.app.domain.usecase.auth.ObserveAuthStateUseCase
 import com.mindInk.app.domain.usecase.reading.MarkReadingCompletedUseCase
 import com.mindInk.app.domain.usecase.reading.UpsertReadingProgressUseCase
+import com.mindInk.app.domain.usecase.star.ObserveStarredArticleIdsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,6 +30,7 @@ class ArticleDetailViewModel @Inject constructor(
     private val toggleStarUseCase: ToggleStarUseCase,
     private val recordArticleView: RecordArticleViewUseCase,
     private val observeAuthState: ObserveAuthStateUseCase,
+    private val observeStarredArticleIds: ObserveStarredArticleIdsUseCase,
     private val upsertReadingProgress: UpsertReadingProgressUseCase,
     private val markReadingCompleted: MarkReadingCompletedUseCase,
     private val pendingReadingStore: PendingReadingStore
@@ -39,6 +42,12 @@ class ArticleDetailViewModel @Inject constructor(
     private var readingStarted: Boolean = false
     private var readingCompleted: Boolean = false
 
+    private var starsJob: Job? = null
+    private var starsUid: String? = null
+    private var starredIds: Set<String> = emptySet()
+    private var expectedStar: Boolean? = null
+    private var starInFlight: Boolean = false
+
     private val _uiState = MutableStateFlow(ArticleDetailUiState())
     val uiState: StateFlow<ArticleDetailUiState> = _uiState.asStateFlow()
 
@@ -46,6 +55,7 @@ class ArticleDetailViewModel @Inject constructor(
         viewModelScope.launch {
             observeAuthState().collect { user ->
                 _uiState.update { it.copy(currentUid = user?.uid) }
+                observeStars(user?.uid)
                 tryRecordView()
                 if (user != null) {
                     tryStartReading()
@@ -72,6 +82,8 @@ class ArticleDetailViewModel @Inject constructor(
         viewRecordedKey = null
         readingStarted = false
         readingCompleted = false
+        expectedStar = null
+        syncStarFlag()
         load()
     }
 
@@ -109,6 +121,30 @@ class ArticleDetailViewModel @Inject constructor(
         viewModelScope.launch {
             pendingReadingStore.add(articleId)
         }
+    }
+
+    private fun observeStars(uid: String?) {
+        if (uid == starsUid) return
+        starsUid = uid
+        starsJob?.cancel()
+        starredIds = emptySet()
+        expectedStar = null
+        syncStarFlag()
+        if (uid == null) return
+
+        starsJob = viewModelScope.launch {
+            observeStarredArticleIds(uid).collect { ids ->
+                starredIds = ids
+                syncStarFlag()
+            }
+        }
+    }
+
+    private fun syncStarFlag() {
+        val actual = articleId.isNotBlank() && articleId in starredIds
+        if (expectedStar == actual) expectedStar = null
+        val flag = expectedStar ?: actual
+        _uiState.update { it.copy(isStarredByMe = flag) }
     }
 
     private fun tryStartReading() {
@@ -166,41 +202,44 @@ class ArticleDetailViewModel @Inject constructor(
     }
 
     fun onToggleStar() {
-        val uid = _uiState.value.currentUid ?: return
-        val current = _uiState.value.article ?: return
-        if (articleId.isBlank()) return
+        val state = _uiState.value
+        val uid = state.currentUid ?: return
+        val current = state.article ?: return
+        if (articleId.isBlank() || starInFlight) return
 
-        val starred = current.starredBy.contains(uid)
-        val optimistic = if (starred) {
-            current.copy(
-                starredBy = current.starredBy - uid,
-                starCount = (current.starCount - 1).coerceAtLeast(0)
-            )
-        } else {
-            current.copy(
-                starredBy = current.starredBy + uid,
-                starCount = current.starCount + 1
+        val targetArticleId = articleId
+        val starred = !state.isStarredByMe
+        val delta = if (starred) 1 else -1
+
+        starInFlight = true
+        expectedStar = starred
+        _uiState.update {
+            it.copy(
+                isStarredByMe = starred,
+                article = current.copy(starCount = (current.starCount + delta).coerceAtLeast(0))
             )
         }
-        _uiState.update { it.copy(article = optimistic) }
 
         viewModelScope.launch {
-            when (val result = toggleStarUseCase(articleId, uid)) {
+            when (val result = toggleStarUseCase(targetArticleId, uid)) {
                 is ToggleStarResult.Success -> {
-                    val refreshed = getArticleById(articleId)
-                    if (refreshed != null) {
+                    val refreshed = getArticleById(targetArticleId)
+                    if (refreshed != null && articleId == targetArticleId) {
                         _uiState.update { it.copy(article = refreshed) }
                     }
                 }
                 is ToggleStarResult.Error -> {
+                    expectedStar = null
                     _uiState.update {
                         it.copy(
-                            article = current,
+                            article = if (articleId == targetArticleId) current else it.article,
                             toastMessage = result.message
                         )
                     }
+                    syncStarFlag()
                 }
             }
+            starInFlight = false
         }
     }
 
