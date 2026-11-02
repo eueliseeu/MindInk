@@ -24,6 +24,7 @@ class AuthorProfileViewModel @Inject constructor(
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AuthorProfileUiState())
+
     val uiState: StateFlow<AuthorProfileUiState> = _uiState.asStateFlow()
 
     private var articlesJob: Job? = null
@@ -43,28 +44,24 @@ class AuthorProfileViewModel @Inject constructor(
         _uiState.value = AuthorProfileUiState(authorUid = authorUid)
 
         profileJob = viewModelScope.launch {
-            when (val result = loadAccountSettings(authorUid)) {
-                is LoadAccountSettingsResult.Success -> {
-                    val profile = result.settings
-                    hasProfileName = profile.name.isNotBlank()
-                    _uiState.update { state ->
-                        if (state.authorUid != authorUid) {
-                            state
-                        } else {
-                            state.copy(
-                                authorName = if (hasProfileName) {
-                                    formatAuthorName(profile.name)
-                                } else {
-                                    state.authorName
-                                },
-                                authorPhotoUrl = profile.photoUrl ?: state.authorPhotoUrl,
-                                githubUrl = profile.github,
-                                linkedinUrl = profile.linkedin
-                            )
-                        }
-                    }
-                }
-                is LoadAccountSettingsResult.Error -> Unit
+            val result = loadAccountSettings(authorUid)
+            if (result !is LoadAccountSettingsResult.Success || currentAuthorUid != authorUid) {
+                return@launch
+            }
+
+            val profile = result.settings
+            hasProfileName = profile.name.isNotBlank()
+            _uiState.update { state ->
+                state.copy(
+                    authorName = if (hasProfileName) {
+                        formatAuthorName(profile.name)
+                    } else {
+                        state.authorName
+                    },
+                    authorPhotoUrl = profile.photoUrl ?: state.authorPhotoUrl,
+                    githubUrl = profile.github,
+                    linkedinUrl = profile.linkedin
+                )
             }
         }
 
