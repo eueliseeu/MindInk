@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.sp
 import com.mindInk.app.ui.articles.formatCount
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.postedAgoText
+import com.mindInk.app.ui.articles.stars.LocalStarredArticleIds
 import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.theme.MindInkMuted
 import com.mindInk.app.ui.theme.MindInkStar
@@ -44,6 +45,8 @@ fun ArticleCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val isStarred = currentUid != null && article.id in LocalStarredArticleIds.current
+
     Column(
         modifier = modifier
             .clip(CardShape)
@@ -128,11 +131,7 @@ fun ArticleCard(
             Icon(
                 imageVector = Icons.Outlined.Star,
                 contentDescription = null,
-                tint = if (currentUid != null && currentUid in article.starredBy) {
-                    MindInkStar
-                } else {
-                    MindInkWhite
-                },
+                tint = if (isStarred) MindInkStar else MindInkWhite,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(4.dp))

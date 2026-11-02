@@ -6,10 +6,12 @@ import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.data.reading.PendingReadingStore
 import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.model.FavoriteAuthor
+import com.mindInk.app.domain.model.ReceivedStar
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.repository.ObserveFavoriteAuthorsResult
 import com.mindInk.app.domain.repository.ObserveReadingResult
+import com.mindInk.app.domain.repository.ObserveReceivedStarsResult
 import com.mindInk.app.domain.repository.PublicUserProfile
 import com.mindInk.app.domain.repository.UserProfileRepository
 import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
@@ -18,6 +20,7 @@ import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
 import com.mindInk.app.domain.usecase.favorite.ObserveFavoriteAuthorsUseCase
 import com.mindInk.app.domain.usecase.reading.ObserveContinueReadingUseCase
 import com.mindInk.app.domain.usecase.reading.UpsertReadingProgressUseCase
+import com.mindInk.app.domain.usecase.star.ObserveReceivedStarsUseCase
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
@@ -36,7 +39,9 @@ private const val REALTIME_LIMIT = 40L
 private const val EXPLORE_PAGE_SIZE = 10L
 private const val TOP_RATED_LIMIT = 10
 private const val MURAL_LIMIT = 3
+private const val RECEIVED_STARS_LIMIT = 10L
 private const val CONTINUE_READING_LIMIT = 5L
+private const val FALLBACK_ACTOR_NAME = "UserMind"
 
 @HiltViewModel
 class ArticlesViewModel @Inject constructor(
@@ -44,6 +49,7 @@ class ArticlesViewModel @Inject constructor(
     private val loadArticlesPage: LoadArticlesPageUseCase,
     private val observeContinueReading: ObserveContinueReadingUseCase,
     private val observeFavoriteAuthors: ObserveFavoriteAuthorsUseCase,
+    private val observeReceivedStars: ObserveReceivedStarsUseCase,
     private val upsertReadingProgress: UpsertReadingProgressUseCase,
     private val getArticleById: GetArticleByIdUseCase,
     private val pendingReadingStore: PendingReadingStore,
@@ -59,9 +65,14 @@ class ArticlesViewModel @Inject constructor(
     private var currentUid: String? = null
     private var lastDomainArticles: List<Article> = emptyList()
     private var favoritedAtByAuthor: Map<String, Long> = emptyMap()
+    private var receivedStars: List<ReceivedStar> = emptyList()
     private var continueReadingJob: Job? = null
     private var favoriteAuthorsJob: Job? = null
+    private var receivedStarsJob: Job? = null
     private var muralJob: Job? = null
+
+    private val profileCache = mutableMapOf<String, PublicUserProfile>()
+    private val titleCache = mutableMapOf<String, String>()
 
     init {
         observeRealtime()
@@ -72,6 +83,7 @@ class ArticlesViewModel @Inject constructor(
         currentUid = uid
         refreshMural(lastDomainArticles, uid)
         startFavoriteAuthors(uid)
+        startReceivedStars(uid)
         startContinueReading(uid)
         flushPendingReading(uid)
     }
@@ -143,11 +155,28 @@ class ArticlesViewModel @Inject constructor(
         }
     }
 
+    private fun startReceivedStars(uid: String) {
+        receivedStarsJob?.cancel()
+        receivedStars = emptyList()
+        receivedStarsJob = viewModelScope.launch {
+            observeReceivedStars(uid, RECEIVED_STARS_LIMIT).collect { result ->
+                when (result) {
+                    is ObserveReceivedStarsResult.Success -> {
+                        receivedStars = result.stars
+                        refreshMural(lastDomainArticles, uid)
+                    }
+                    is ObserveReceivedStarsResult.Error -> Unit
+                }
+            }
+        }
+    }
+
     private fun refreshMural(articles: List<Article>, uid: String) {
+        val stars = receivedStars
         val favoritedAt = favoritedAtByAuthor
         muralJob?.cancel()
         muralJob = viewModelScope.launch {
-            val items = buildMuralItems(articles, uid, favoritedAt)
+            val items = buildMuralItems(articles, uid, stars, favoritedAt)
             _uiState.update { it.copy(muralItems = items) }
         }
     }
@@ -171,7 +200,6 @@ class ArticlesViewModel @Inject constructor(
                                 authorPhotoUrl = live?.authorPhotoUrl ?: item.authorPhotoUrl,
                                 starCount = live?.starCount ?: item.starCount,
                                 viewCount = live?.viewCount ?: item.viewCount,
-                                starredBy = live?.starredBy.orEmpty(),
                                 createdAt = item.updatedAt
                             )
                         }
@@ -257,61 +285,52 @@ class ArticlesViewModel @Inject constructor(
     private suspend fun buildMuralItems(
         articles: List<Article>,
         uid: String,
+        receivedStars: List<ReceivedStar>,
         favoritedAtByAuthor: Map<String, Long>
     ): List<MuralItemUi> {
-        if (articles.isEmpty()) return emptyList()
+        val articlesById = articles.associateBy { it.id }
 
-        val authorLookup = articles
-            .groupBy { it.authorUid }
-            .mapValues { (_, list) -> list.first() }
+        val stars = receivedStars
+            .filter { it.starerUid != uid }
+            .take(MURAL_LIMIT)
 
-        val ownArticles = articles.filter { it.authorUid == uid }
-
-        val starerUids = ownArticles
-            .flatMap { it.starredBy }
-            .filter { it != uid }
+        val missingProfiles = stars
+            .map { it.starerUid }
             .distinct()
-
-        val missingUids = starerUids.filter { it !in authorLookup }
-        val profileLookup: Map<String, PublicUserProfile> =
-            if (missingUids.isEmpty()) {
-                emptyMap()
-            } else {
-                userProfileRepository.getProfiles(missingUids)
+            .filter { it !in profileCache }
+        if (missingProfiles.isNotEmpty()) {
+            val fetched = userProfileRepository.getProfiles(missingProfiles)
+            missingProfiles.forEach { starerUid ->
+                profileCache[starerUid] = fetched[starerUid]
+                    ?: PublicUserProfile(uid = starerUid, name = "")
             }
-
-        val events = mutableListOf<MuralItemUi>()
-
-        ownArticles.forEach { article ->
-            article.starredBy
-                .filter { starerUid -> starerUid != uid }
-                .forEach { starerUid ->
-                    val fromArticle = authorLookup[starerUid]
-                    val fromProfile = profileLookup[starerUid]
-                    val name = when {
-                        !fromArticle?.authorName.isNullOrBlank() ->
-                            formatAuthorName(fromArticle?.authorName)
-                        !fromProfile?.name.isNullOrBlank() ->
-                            formatAuthorName(fromProfile?.name)
-                        else -> "UserMind"
-                    }
-                    val photo = fromArticle?.authorPhotoUrl ?: fromProfile?.photoUrl
-                    events += MuralItemUi.StarReceived(
-                        id = "star_${article.id}_$starerUid",
-                        actorUid = starerUid,
-                        actorName = name,
-                        actorPhotoUrl = photo,
-                        articleId = article.id,
-                        articleTitle = article.title,
-                        sortKey = maxOf(article.updatedAt, article.createdAt)
-                    )
-                }
         }
 
-        articles.forEach { article ->
-            val favoritedAt = favoritedAtByAuthor[article.authorUid] ?: return@forEach
-            if (article.createdAt <= favoritedAt) return@forEach
-            events += MuralItemUi.NewArticleFromFavorite(
+        val starEvents = stars.mapNotNull { star ->
+            val title = articlesById[star.articleId]?.title
+                ?: titleCache[star.articleId]
+                ?: getArticleById(star.articleId)?.title?.also { titleCache[star.articleId] = it }
+                ?: return@mapNotNull null
+            val profile = profileCache[star.starerUid]
+
+            MuralItemUi.StarReceived(
+                id = "star_${star.articleId}_${star.starerUid}",
+                actorUid = star.starerUid,
+                actorName = profile?.name
+                    ?.takeIf { it.isNotBlank() }
+                    ?.let(::formatAuthorName)
+                    ?: FALLBACK_ACTOR_NAME,
+                actorPhotoUrl = profile?.photoUrl,
+                articleId = star.articleId,
+                articleTitle = title,
+                sortKey = star.createdAt
+            )
+        }
+
+        val newArticleEvents = articles.mapNotNull { article ->
+            val favoritedAt = favoritedAtByAuthor[article.authorUid] ?: return@mapNotNull null
+            if (article.createdAt <= favoritedAt) return@mapNotNull null
+            MuralItemUi.NewArticleFromFavorite(
                 id = "new_${article.id}",
                 actorUid = article.authorUid,
                 actorName = formatAuthorName(article.authorName),
@@ -322,7 +341,7 @@ class ArticlesViewModel @Inject constructor(
             )
         }
 
-        return events
+        return (starEvents + newArticleEvents)
             .sortedByDescending { it.sortKey }
             .distinctBy { it.id }
             .take(MURAL_LIMIT)

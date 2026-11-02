@@ -148,7 +148,6 @@ fun ArticlesScreen(
                                     authorPhotoUrl = item.actorPhotoUrl,
                                     starCount = 0,
                                     viewCount = 0,
-                                    starredBy = emptyList(),
                                     createdAt = item.sortKey
                                 )
                             )
