@@ -69,6 +69,10 @@ fun GuestAuthorProfileScreen(
         viewModel.load(authorUid)
     }
 
+    // O ViewModel é reaproveitado entre perfis: até o load() rodar, o estado ainda
+    // pertence ao perfil anterior e não pode ser exibido.
+    val isLoading = state.isLoading || state.authorUid != authorUid
+
     val displayName = state.authorName.ifBlank { "Autor" }
     val shortName = displayName.substringBefore(" ").ifBlank { displayName }
     val previewArticles = state.articles.take(GUEST_ARTICLES_LIMIT)
@@ -80,7 +84,7 @@ fun GuestAuthorProfileScreen(
             .navigationBarsPadding()
     ) {
         when {
-            state.isLoading -> {
+            isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -246,11 +250,10 @@ private fun GuestProfileHeader(
                             onClick = { uriHandler.openUri(linkedinLink) },
                             modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Link,
-                                contentDescription = "LinkedIn",
-                                tint = MindInkWhite,
-                                modifier = Modifier.size(22.dp)
+                            Image(
+                                painter = painterResource(R.drawable.linkedin),
+                                contentDescription = "Linkedin",
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }

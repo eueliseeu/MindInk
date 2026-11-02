@@ -76,6 +76,10 @@ fun AuthorProfileScreen(
         viewModel.load(authorUid)
     }
 
+    // O ViewModel é reaproveitado entre perfis: até o load() rodar, o estado ainda
+    // pertence ao perfil anterior e não pode ser exibido.
+    val isLoading = state.isLoading || state.authorUid != authorUid
+
     val displayName = state.authorName.ifBlank {
         if (isOwnProfile) {
             user.displayName?.takeIf { it.isNotBlank() } ?: "Você"
@@ -94,7 +98,7 @@ fun AuthorProfileScreen(
             .navigationBarsPadding()
     ) {
         when {
-            state.isLoading -> {
+            isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -353,11 +357,10 @@ fun StandardProfileHeader(
                             onClick = { uriHandler.openUri(linkedinLink) },
                             modifier = Modifier.size(36.dp)
                         ) {
-                            Icon(
-                                imageVector = Icons.Rounded.Link,
-                                contentDescription = "LinkedIn",
-                                tint = MindInkWhite,
-                                modifier = Modifier.size(22.dp)
+                             Image(
+                                painter = painterResource(R.drawable.linkedin),
+                                contentDescription = "Linkedin",
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
