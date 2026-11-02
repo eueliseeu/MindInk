@@ -8,6 +8,7 @@ import androidx.activity.enableEdgeToEdge
 import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -22,6 +23,8 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.mindInk.app.ui.articles.ArticlesScreen
 import com.mindInk.app.ui.articles.detail.ArticleDetailScreen
 import com.mindInk.app.ui.articles.editor.CreateEditArticleScreen
+import com.mindInk.app.ui.articles.stars.LocalStarredArticleIds
+import com.mindInk.app.ui.articles.stars.StarredArticlesViewModel
 import com.mindInk.app.ui.auth.AuthViewModel
 import com.mindInk.app.ui.auth.LinkAccountDialog
 import com.mindInk.app.ui.auth.LoginScreen
@@ -43,6 +46,7 @@ import dagger.hilt.android.AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
     private val authViewModel: AuthViewModel by viewModels()
+    private val starredArticlesViewModel: StarredArticlesViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
@@ -56,6 +60,7 @@ class MainActivity : ComponentActivity() {
                 val session by viewModel.sessionState.collectAsState()
                 val uiState by viewModel.uiState.collectAsState()
                 val isOnline by viewModel.isOnline.collectAsState()
+                val starredIds by starredArticlesViewModel.starredIds.collectAsState()
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showLogin by rememberSaveable { mutableStateOf(false) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
@@ -102,181 +107,183 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                Box(modifier = Modifier.fillMaxSize()) {
-                    if (showSplash || session is SessionState.Loading) {
-                        SplashScreen(
-                            onFinished = { showSplash = false }
-                        )
-                    } else if (!isOnline) {
-                        OfflineScreen()
-                    } else {
-                        val current = session
-                        when {
-                            current is SessionState.Authenticated && !uiState.isLoading -> {
-                                val currentUser = current.user.copy(
-                                    displayName = profileNameOverride
-                                        ?.takeIf { profileNameOverrideUid == current.user.uid }
-                                        ?: current.user.displayName
-                                )
-                                val openMyProfile: () -> Unit = {
-                                    selectedArticleId = null
-                                    showCreateArticle = false
-                                    showAccountSettings = false
-                                    selectedAuthorUid = current.user.uid
-                                }
-                                val openAccountSettings: () -> Unit = {
-                                    selectedArticleId = null
-                                    selectedAuthorUid = null
-                                    showCreateArticle = false
-                                    showAccountSettings = true
-                                }
-
-                                when {
-                                    showAccountSettings -> {
-                                        AccountSettingsScreen(
-                                            user = currentUser,
-                                            onBack = { showAccountSettings = false },
-                                            onSignOut = viewModel::onSignOutClick,
-                                            onAccountDeleted = { showAccountSettings = false },
-                                            onProfileUpdated = {
-                                                profileNameOverride = it
-                                                profileNameOverrideUid = current.user.uid
-                                            }
-                                        )
+                CompositionLocalProvider(LocalStarredArticleIds provides starredIds) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        if (showSplash || session is SessionState.Loading) {
+                            SplashScreen(
+                                onFinished = { showSplash = false }
+                            )
+                        } else if (!isOnline) {
+                            OfflineScreen()
+                        } else {
+                            val current = session
+                            when {
+                                current is SessionState.Authenticated && !uiState.isLoading -> {
+                                    val currentUser = current.user.copy(
+                                        displayName = profileNameOverride
+                                            ?.takeIf { profileNameOverrideUid == current.user.uid }
+                                            ?: current.user.displayName
+                                    )
+                                    val openMyProfile: () -> Unit = {
+                                        selectedArticleId = null
+                                        showCreateArticle = false
+                                        showAccountSettings = false
+                                        selectedAuthorUid = current.user.uid
+                                    }
+                                    val openAccountSettings: () -> Unit = {
+                                        selectedArticleId = null
+                                        selectedAuthorUid = null
+                                        showCreateArticle = false
+                                        showAccountSettings = true
                                     }
 
-                                    selectedArticleId != null -> {
-                                        selectedArticleId?.let { articleId ->
-                                            ArticleDetailScreen(
-                                                articleId = articleId,
+                                    when {
+                                        showAccountSettings -> {
+                                            AccountSettingsScreen(
                                                 user = currentUser,
-                                                onBack = { selectedArticleId = null },
+                                                onBack = { showAccountSettings = false },
                                                 onSignOut = viewModel::onSignOutClick,
-                                                onProfileClick = openMyProfile,
-                                                onSettingsClick = openAccountSettings
+                                                onAccountDeleted = { showAccountSettings = false },
+                                                onProfileUpdated = {
+                                                    profileNameOverride = it
+                                                    profileNameOverrideUid = current.user.uid
+                                                }
                                             )
                                         }
-                                    }
 
-                                    selectedAuthorUid != null -> {
-                                        selectedAuthorUid?.let { authorUid ->
-                                            AuthorProfileScreen(
-                                                authorUid = authorUid,
+                                        selectedArticleId != null -> {
+                                            selectedArticleId?.let { articleId ->
+                                                ArticleDetailScreen(
+                                                    articleId = articleId,
+                                                    user = currentUser,
+                                                    onBack = { selectedArticleId = null },
+                                                    onSignOut = viewModel::onSignOutClick,
+                                                    onProfileClick = openMyProfile,
+                                                    onSettingsClick = openAccountSettings
+                                                )
+                                            }
+                                        }
+
+                                        selectedAuthorUid != null -> {
+                                            selectedAuthorUid?.let { authorUid ->
+                                                AuthorProfileScreen(
+                                                    authorUid = authorUid,
+                                                    user = currentUser,
+                                                    onBack = { selectedAuthorUid = null },
+                                                    onArticleClick = { card ->
+                                                        selectedAuthorUid = null
+                                                        selectedArticleId = card.id
+                                                    },
+                                                    onSignOut = viewModel::onSignOutClick,
+                                                    onProfileClick = openMyProfile,
+                                                    onSettingsClick = openAccountSettings
+                                                )
+                                            }
+                                        }
+
+                                        showCreateArticle -> {
+                                            CreateEditArticleScreen(
                                                 user = currentUser,
-                                                onBack = { selectedAuthorUid = null },
-                                                onArticleClick = { card ->
-                                                    selectedAuthorUid = null
-                                                    selectedArticleId = card.id
+                                                onBack = { showCreateArticle = false },
+                                                onSaved = {
+                                                    showCreateArticle = false
+                                                    toast = ToastMessage("Seu artigo foi publicado.")
                                                 },
                                                 onSignOut = viewModel::onSignOutClick,
                                                 onProfileClick = openMyProfile,
                                                 onSettingsClick = openAccountSettings
                                             )
                                         }
-                                    }
 
-                                    showCreateArticle -> {
-                                        CreateEditArticleScreen(
-                                            user = currentUser,
-                                            onBack = { showCreateArticle = false },
-                                            onSaved = {
-                                                showCreateArticle = false
-                                                toast = ToastMessage("Seu artigo foi publicado.")
-                                            },
-                                            onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile,
-                                            onSettingsClick = openAccountSettings
-                                        )
-                                    }
-
-                                    else -> {
-                                        ArticlesScreen(
-                                            user = currentUser,
-                                            onSignOut = viewModel::onSignOutClick,
-                                            onProfileClick = openMyProfile,
-                                            onSettingsClick = openAccountSettings,
-                                            onAddArticleClick = { showCreateArticle = true },
-                                            onArticleClick = { card ->
-                                                selectedArticleId = card.id
-                                            },
-                                            onAuthorClick = { author ->
-                                                selectedAuthorUid = author.uid
-                                            }
-                                        )
+                                        else -> {
+                                            ArticlesScreen(
+                                                user = currentUser,
+                                                onSignOut = viewModel::onSignOutClick,
+                                                onProfileClick = openMyProfile,
+                                                onSettingsClick = openAccountSettings,
+                                                onAddArticleClick = { showCreateArticle = true },
+                                                onArticleClick = { card ->
+                                                    selectedArticleId = card.id
+                                                },
+                                                onAuthorClick = { author ->
+                                                    selectedAuthorUid = author.uid
+                                                }
+                                            )
+                                        }
                                     }
                                 }
-                            }
 
-                            else -> {
-                                showCreateArticle = false
-                                showAccountSettings = false
+                                else -> {
+                                    showCreateArticle = false
+                                    showAccountSettings = false
 
-                                when {
-                                    showLogin -> {
-                                        LoginScreen(
-                                            loadingProvider = uiState.loadingProvider,
-                                            onGoogleClick = {
-                                                viewModel.onGoogleClick(this@MainActivity)
-                                            },
-                                            onGitHubClick = {
-                                                viewModel.onGitHubClick(this@MainActivity)
-                                            }
-                                        )
-                                    }
+                                    when {
+                                        showLogin -> {
+                                            LoginScreen(
+                                                loadingProvider = uiState.loadingProvider,
+                                                onGoogleClick = {
+                                                    viewModel.onGoogleClick(this@MainActivity)
+                                                },
+                                                onGitHubClick = {
+                                                    viewModel.onGitHubClick(this@MainActivity)
+                                                }
+                                            )
+                                        }
 
-                                    selectedArticleId != null -> {
-                                        GuestArticleDetailScreen(
-                                            articleId = selectedArticleId!!,
-                                            onBack = { selectedArticleId = null },
-                                            onMyAccountClick = {
-                                                selectedArticleId = null
-                                                showLogin = true
-                                            }
-                                        )
-                                    }
+                                        selectedArticleId != null -> {
+                                            GuestArticleDetailScreen(
+                                                articleId = selectedArticleId!!,
+                                                onBack = { selectedArticleId = null },
+                                                onMyAccountClick = {
+                                                    selectedArticleId = null
+                                                    showLogin = true
+                                                }
+                                            )
+                                        }
 
-                                    selectedAuthorUid != null -> {
-                                        GuestAuthorProfileScreen(
-                                            authorUid = selectedAuthorUid!!,
-                                            onBack = { selectedAuthorUid = null },
-                                            onArticleClick = { card ->
-                                                selectedAuthorUid = null
-                                                selectedArticleId = card.id
-                                            },
-                                            onAccessMoreClick = {
-                                                selectedAuthorUid = null
-                                                showLogin = true
-                                            }
-                                        )
-                                    }
+                                        selectedAuthorUid != null -> {
+                                            GuestAuthorProfileScreen(
+                                                authorUid = selectedAuthorUid!!,
+                                                onBack = { selectedAuthorUid = null },
+                                                onArticleClick = { card ->
+                                                    selectedAuthorUid = null
+                                                    selectedArticleId = card.id
+                                                },
+                                                onAccessMoreClick = {
+                                                    selectedAuthorUid = null
+                                                    showLogin = true
+                                                }
+                                            )
+                                        }
 
-                                    else -> {
-                                        GuestHomeScreen(
-                                            onMyAccountClick = { showLogin = true },
-                                            onArticleClick = { card ->
-                                                selectedArticleId = card.id
-                                            },
-                                            onAuthorClick = { author ->
-                                                selectedAuthorUid = author.uid
-                                            }
-                                        )
+                                        else -> {
+                                            GuestHomeScreen(
+                                                onMyAccountClick = { showLogin = true },
+                                                onArticleClick = { card ->
+                                                    selectedArticleId = card.id
+                                                },
+                                                onAuthorClick = { author ->
+                                                    selectedAuthorUid = author.uid
+                                                }
+                                            )
+                                        }
                                     }
                                 }
                             }
                         }
-                    }
 
-                    ToastHost(
-                        message = toast,
-                        onDismiss = { toast = null }
-                    )
-
-                    uiState.linkRequest?.let { request ->
-                        LinkAccountDialog(
-                            request = request,
-                            onConfirm = { viewModel.onConfirmLink(this@MainActivity) },
-                            onDismiss = viewModel::onDismissLink
+                        ToastHost(
+                            message = toast,
+                            onDismiss = { toast = null }
                         )
+
+                        uiState.linkRequest?.let { request ->
+                            LinkAccountDialog(
+                                request = request,
+                                onConfirm = { viewModel.onConfirmLink(this@MainActivity) },
+                                onDismiss = viewModel::onDismissLink
+                            )
+                        }
                     }
                 }
             }

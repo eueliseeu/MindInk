@@ -8,7 +8,6 @@ data class ArticleDto(
     val title: String = "",
     val subtitle: String = "",
     val content: String = "",
-    val starredBy: List<String> = emptyList(),
     val starCount: Int = 0,
     val viewCount: Int = 0,
     val createdAt: Long = 0L,
