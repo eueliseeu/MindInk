@@ -43,7 +43,7 @@ fun MuralSection(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Status dos seus artigos.",
+            text = "Estrelas nos seus artigos e novidades dos autores que você curte.",
             color = MindInkMuted,
             fontSize = 13.sp,
             lineHeight = 18.sp
