@@ -6,5 +6,6 @@ import javax.inject.Inject
 class ObserveArticlesUseCase @Inject constructor(
     private val repository: ArticleRepository
 ) {
-    operator fun invoke(limit: Long = 50) = repository.observeArticles(limit)
+    operator fun invoke(limit: Long = 50) =
+        repository.observeArticles(limit)
 }

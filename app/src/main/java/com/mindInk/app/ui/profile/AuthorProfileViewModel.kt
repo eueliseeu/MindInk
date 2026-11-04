@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.repository.LoadAccountSettingsResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
-import com.mindInk.app.domain.usecase.article.ObserveArticlesByAuthorUseCase
+import com.mindInk.app.domain.usecase.article.ObserveArticlesByAuthorsUseCase
 import com.mindInk.app.domain.usecase.settings.LoadAccountSettingsUseCase
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +23,7 @@ private const val LOAD_ERROR_MESSAGE = "Não foi possível carregar os artigos d
 
 @HiltViewModel
 class AuthorProfileViewModel @Inject constructor(
-    private val observeArticlesByAuthor: ObserveArticlesByAuthorUseCase,
+    private val observeArticlesByAuthors: ObserveArticlesByAuthorsUseCase,
     private val loadAccountSettings: LoadAccountSettingsUseCase
 ) : ViewModel() {
 
@@ -70,7 +70,7 @@ class AuthorProfileViewModel @Inject constructor(
         }
 
         articlesJob = viewModelScope.launch {
-            observeArticlesByAuthor(authorUid).collect { result ->
+            observeArticlesByAuthors(listOf(authorUid)).collect { result ->
                 when (result) {
                     is ObserveArticlesResult.Success -> {
                         val list = result.articles
@@ -91,7 +91,10 @@ class AuthorProfileViewModel @Inject constructor(
                         }
                     }
                     is ObserveArticlesResult.Error -> {
-                        Log.e(TAG, "Falha ao carregar artigos do autor $authorUid: ${result.message}")
+                        Log.e(
+                            TAG,
+                            "Falha ao carregar artigos do autor $authorUid: ${result.message}"
+                        )
                         _uiState.update {
                             it.copy(isLoading = false, errorMessage = LOAD_ERROR_MESSAGE)
                         }
