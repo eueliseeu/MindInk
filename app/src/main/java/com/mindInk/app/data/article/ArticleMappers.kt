@@ -1,11 +1,13 @@
 package com.mindInk.app.data.article
 
+import com.google.firebase.Timestamp
 import com.google.firebase.firestore.DocumentSnapshot
+import com.google.firebase.firestore.DocumentSnapshot.ServerTimestampBehavior
 import com.mindInk.app.domain.model.Article
 
 internal fun DocumentSnapshot.toArticle(): Article? {
-    val data = toObject(ArticleDto::class.java) ?: return null
-    if (data.title.isBlank() || data.content.isBlank()) return null
+    val data = toObject(ArticleDto::class.java, ServerTimestampBehavior.ESTIMATE) ?: return null
+    if (data.title.isBlank()) return null
     return Article(
         id = id,
         authorUid = data.authorUid,
@@ -14,10 +16,12 @@ internal fun DocumentSnapshot.toArticle(): Article? {
         category = data.category,
         title = data.title,
         subtitle = data.subtitle,
-        content = data.content,
+        excerpt = data.excerpt,
         starCount = data.starCount,
         viewCount = data.viewCount,
-        createdAt = data.createdAt,
-        updatedAt = data.updatedAt
+        createdAt = data.createdAt.toMillis(),
+        updatedAt = data.updatedAt.toMillis()
     )
 }
+
+private fun Timestamp?.toMillis(): Long = this?.toDate()?.time ?: 0L

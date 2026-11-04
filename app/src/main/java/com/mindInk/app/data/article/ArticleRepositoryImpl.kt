@@ -4,7 +4,7 @@ import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
-import com.google.firebase.firestore.SetOptions
+import com.mindInk.app.core.buildExcerpt
 import com.mindInk.app.domain.model.Article
 import com.mindInk.app.domain.repository.ArticleRepository
 import com.mindInk.app.domain.repository.ArticlesPage
@@ -19,12 +19,13 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val VIEWS_SUBCOLLECTION = "views"
 private const val AUTHOR_NAME_BATCH_SIZE = 450L
+private const val IN_QUERY_LIMIT = 10
 
 @Singleton
 class ArticleRepositoryImpl @Inject constructor(
@@ -50,6 +51,22 @@ class ArticleRepositoryImpl @Inject constructor(
                 .limit(limit),
             errorMessage = "Falha ao carregar artigos do autor."
         )
+
+    override fun observeArticlesByAuthors(
+        authorUids: List<String>,
+        limit: Long
+    ): Flow<ObserveArticlesResult> {
+        val uids = authorUids.filter { it.isNotBlank() }.distinct().take(IN_QUERY_LIMIT)
+        if (uids.isEmpty()) return flowOf(ObserveArticlesResult.Success(emptyList()))
+
+        return observeArticlesQuery(
+            query = articles
+                .whereIn("authorUid", uids)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(limit),
+            errorMessage = "Falha ao carregar artigos dos autores."
+        )
+    }
 
     private fun observeArticlesQuery(
         query: Query,
@@ -114,6 +131,39 @@ class ArticleRepositoryImpl @Inject constructor(
         }
     }
 
+    override suspend fun getArticlesByIds(articleIds: Collection<String>): List<Article> {
+        val ids = articleIds.filter { it.isNotBlank() }.distinct()
+        if (ids.isEmpty()) return emptyList()
+
+        return try {
+            ids.chunked(IN_QUERY_LIMIT).flatMap { chunk ->
+                articles
+                    .whereIn(FieldPath.documentId(), chunk)
+                    .get()
+                    .await()
+                    .documents
+                    .mapNotNull { it.toArticle() }
+            }
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    override suspend fun getArticleContent(articleId: String): String? {
+        return try {
+            firestore.articleContentRef(articleId)
+                .get()
+                .await()
+                .getString(ARTICLE_CONTENT_FIELD)
+        } catch (e: CancellationException) {
+            throw e
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     override suspend fun createArticle(
         authorUid: String,
         authorName: String,
@@ -124,22 +174,29 @@ class ArticleRepositoryImpl @Inject constructor(
         content: String
     ): CreateArticleResult {
         return try {
-            val now = System.currentTimeMillis()
             val ref = articles.document()
-            val dto = ArticleDto(
-                authorUid = authorUid,
-                authorName = authorName,
-                authorPhotoUrl = authorPhotoUrl,
-                category = category,
-                title = title,
-                subtitle = subtitle,
-                content = content,
-                starCount = 0,
-                viewCount = 0,
-                createdAt = now,
-                updatedAt = now
+            val batch = firestore.batch()
+            batch.set(
+                ref,
+                mapOf(
+                    "authorUid" to authorUid,
+                    "authorName" to authorName,
+                    "authorPhotoUrl" to authorPhotoUrl,
+                    "category" to category,
+                    "title" to title,
+                    "subtitle" to subtitle,
+                    "excerpt" to buildExcerpt(content),
+                    "starCount" to 0,
+                    "viewCount" to 0,
+                    "createdAt" to FieldValue.serverTimestamp(),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
             )
-            ref.set(dto).await()
+            batch.set(
+                firestore.articleContentRef(ref.id),
+                mapOf(ARTICLE_CONTENT_FIELD to content)
+            )
+            batch.commit().await()
             CreateArticleResult.Success(ref.id)
         } catch (e: CancellationException) {
             throw e
@@ -163,16 +220,23 @@ class ArticleRepositoryImpl @Inject constructor(
             if (existing.authorUid != authorUid) {
                 return UpdateArticleResult.Error("Sem permissão para editar este artigo.")
             }
-            ref.set(
+
+            val batch = firestore.batch()
+            batch.update(
+                ref,
                 mapOf(
                     "category" to category,
                     "title" to title,
                     "subtitle" to subtitle,
-                    "content" to content,
-                    "updatedAt" to System.currentTimeMillis()
-                ),
-                SetOptions.merge()
-            ).await()
+                    "excerpt" to buildExcerpt(content),
+                    "updatedAt" to FieldValue.serverTimestamp()
+                )
+            )
+            batch.set(
+                firestore.articleContentRef(articleId),
+                mapOf(ARTICLE_CONTENT_FIELD to content)
+            )
+            batch.commit().await()
             UpdateArticleResult.Success
         } catch (e: CancellationException) {
             throw e
@@ -217,13 +281,12 @@ class ArticleRepositoryImpl @Inject constructor(
         requesterUid: String
     ): DeleteArticleResult {
         return try {
-            val ref = articles.document(articleId)
-            val existing = ref.get().await().toArticle()
+            val existing = articles.document(articleId).get().await().toArticle()
                 ?: return DeleteArticleResult.Error("Artigo não encontrado.")
             if (existing.authorUid != requesterUid) {
                 return DeleteArticleResult.Error("Sem permissão para apagar este artigo.")
             }
-            ref.delete().await()
+            firestore.deleteArticleCascade(articleId)
             DeleteArticleResult.Success
         } catch (e: CancellationException) {
             throw e
@@ -237,7 +300,7 @@ class ArticleRepositoryImpl @Inject constructor(
         viewerUid: String
     ): RecordArticleViewResult = try {
         val articleRef = articles.document(articleId)
-        val viewRef = articleRef.collection(VIEWS_SUBCOLLECTION).document(viewerUid)
+        val viewRef = articleRef.collection(ARTICLE_VIEWS_SUBCOLLECTION).document(viewerUid)
         val viewCount = firestore.runTransaction { transaction ->
             val articleSnapshot = transaction.get(articleRef)
             if (!articleSnapshot.exists()) return@runTransaction null
