@@ -84,7 +84,7 @@ fun MuralSection(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = when (item) {
-                                is MuralItemUi.StarReceived -> "$firstName deixou uma estrela no seu artigo"
+                                is MuralItemUi.StarReceived -> "$firstName deixou uma estrela"
                                 is MuralItemUi.NewArticleFromFavorite -> "$firstName publicou um novo artigo"
                             },
                             color = MindInkWhite,

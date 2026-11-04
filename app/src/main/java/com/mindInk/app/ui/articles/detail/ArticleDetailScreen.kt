@@ -21,6 +21,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Star
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -72,6 +74,8 @@ fun ArticleDetailScreen(
     onSignOut: () -> Unit = {},
     onProfileClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
+    onCommentsClick: () -> Unit = {},
+    onShareClick: () -> Unit = {},
     viewModel: ArticleDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -229,7 +233,6 @@ fun ArticleDetailScreen(
                         ) {
                             Row(
                                 modifier = Modifier
-                                    .weight(1f)
                                     .heightIn(min = 48.dp)
                                     .clickable(
                                         interactionSource = remember {
@@ -264,6 +267,26 @@ fun ArticleDetailScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
+                                Row(
+                                    modifier = Modifier
+                                        .heightIn(min = 48.dp)
+                                        .clickable(
+                                            interactionSource = remember { MutableInteractionSource() },
+                                            indication = null,
+                                            role = Role.Button,
+                                            onClick = onCommentsClick
+                                        )
+                                        .padding(horizontal = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.ChatBubbleOutline,
+                                        contentDescription = "Comentários",
+                                        tint = MindInkWhite,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
                             }
 
                             IconButton(
