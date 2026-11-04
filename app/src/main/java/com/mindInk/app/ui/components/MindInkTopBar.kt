@@ -203,23 +203,6 @@ fun MindInkTopBar(
                                     )
                                 }
 
-                                if (onSettingsClick != null) {
-                                    Text(
-                                        text = "Configurações",
-                                        color = MindInkWhite,
-                                        fontSize = 14.sp,
-                                        modifier = Modifier
-                                            .fillMaxWidth()
-                                            .clickable {
-                                                menuExpanded = false
-                                                onSettingsClick()
-                                            }
-                                            .padding(
-                                                horizontal = 16.dp,
-                                                vertical = 12.dp
-                                            )
-                                    )
-                                }
 
                                 Text(
                                     text = "Sair",

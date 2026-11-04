@@ -60,7 +60,6 @@ fun GuestArticleDetailScreen(
         MindInkTopBar(
             screenTitle = "Lendo o Art.",
             user = null,
-            onBack = onBack,
             showSearch = false,
             showUserMenu = false
         )

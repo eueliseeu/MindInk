@@ -82,7 +82,6 @@ fun AccountSettingsScreen(
         MindInkTopBar(
             screenTitle = "Configurações",
             user = user,
-            onBack = onBack,
             showSearch = false,
             showUserMenu = false,
             onSignOut = onSignOut
