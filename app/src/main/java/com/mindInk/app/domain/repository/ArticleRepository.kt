@@ -52,12 +52,21 @@ interface ArticleRepository {
         limit: Long = 50
     ): Flow<ObserveArticlesResult>
 
+    fun observeArticlesByAuthors(
+        authorUids: List<String>,
+        limit: Long = 20
+    ): Flow<ObserveArticlesResult>
+
     suspend fun loadArticlesPage(
         pageSize: Long = 10,
         startAfterDocumentId: String? = null
     ): LoadArticlesPageResult
 
     suspend fun getArticleById(articleId: String): Article?
+
+    suspend fun getArticlesByIds(articleIds: Collection<String>): List<Article>
+
+    suspend fun getArticleContent(articleId: String): String?
 
     suspend fun createArticle(
         authorUid: String,

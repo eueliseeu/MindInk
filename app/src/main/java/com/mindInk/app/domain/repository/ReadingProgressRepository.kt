@@ -19,13 +19,6 @@ interface ReadingProgressRepository {
     suspend fun upsertProgress(
         uid: String,
         articleId: String,
-        title: String,
-        category: String,
-        summary: String,
-        authorName: String,
-        authorPhotoUrl: String?,
-        starCount: Int,
-        viewCount: Int,
         progress: Float
     ): UpsertReadingResult
 

@@ -32,6 +32,10 @@ sealed interface DeleteAccountResult {
 interface AuthRepository {
     fun observeAuthState(): Flow<AuthUser?>
 
+    fun currentUid(): String?
+
+    suspend fun hasRecentLogin(): Boolean
+
     suspend fun signInWithGoogle(activity: Activity): SignInResult
 
     suspend fun signInWithGitHub(activity: Activity): SignInResult
