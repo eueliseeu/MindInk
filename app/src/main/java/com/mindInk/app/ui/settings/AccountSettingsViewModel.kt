@@ -41,6 +41,7 @@ class AccountSettingsViewModel @Inject constructor(
             uid = user.uid,
             name = user.displayName.orEmpty().ifBlank { user.email.orEmpty().substringBefore("@") },
             email = user.email.orEmpty(),
+            photoUrl = user.photoUrl,
             isLoading = true
         )
 
@@ -51,6 +52,7 @@ class AccountSettingsViewModel @Inject constructor(
                         state.copy(
                             isLoading = false,
                             name = result.settings.name.ifBlank { state.name },
+                            photoUrl = result.settings.photoUrl ?: state.photoUrl,
                             github = result.settings.github,
                             linkedin = result.settings.linkedin
                         )
