@@ -19,7 +19,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Link
+import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -41,7 +41,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
-import com.mindInk.app.core.normalizeSocialProfileUrl
+import com.mindInk.app.core.normalizeGithubProfileUrl
+import com.mindInk.app.core.normalizeLinkedInProfileUrl
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.components.MindInkCtaButton
@@ -69,10 +70,6 @@ fun GuestAuthorProfileScreen(
         viewModel.load(authorUid)
     }
 
-    // O ViewModel é reaproveitado entre perfis: até o load() rodar, o estado ainda
-    // pertence ao perfil anterior e não pode ser exibido.
-    val isLoading = state.isLoading || state.authorUid != authorUid
-
     val displayName = state.authorName.ifBlank { "Autor" }
     val shortName = displayName.substringBefore(" ").ifBlank { displayName }
     val previewArticles = state.articles.take(GUEST_ARTICLES_LIMIT)
@@ -84,7 +81,7 @@ fun GuestAuthorProfileScreen(
             .navigationBarsPadding()
     ) {
         when {
-            isLoading -> {
+            state.isLoading -> {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -113,7 +110,8 @@ fun GuestAuthorProfileScreen(
                             name = displayName,
                             photoUrl = state.authorPhotoUrl,
                             githubUrl = state.githubUrl,
-                            linkedinUrl = state.linkedinUrl
+                            linkedinUrl = state.linkedinUrl,
+                            onBack = onBack
                         )
                     }
 
@@ -124,7 +122,10 @@ fun GuestAuthorProfileScreen(
                             color = MindInkWhite,
                             fontSize = 18.sp,
                             fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)
+                            modifier = Modifier.padding(
+                                horizontal = 20.dp,
+                                vertical = 12.dp
+                            )
                         )
                     }
 
@@ -157,11 +158,12 @@ private fun GuestProfileHeader(
     name: String,
     photoUrl: String?,
     githubUrl: String,
-    linkedinUrl: String
+    linkedinUrl: String,
+    onBack: (() -> Unit)? = null
 ) {
     val uriHandler = LocalUriHandler.current
-    val githubLink = normalizeSocialProfileUrl(githubUrl, "github")
-    val linkedinLink = normalizeSocialProfileUrl(linkedinUrl, "linkedin")
+    val githubLink = normalizeGithubProfileUrl(githubUrl)
+    val linkedinLink = normalizeLinkedInProfileUrl(linkedinUrl)
     val overlap = AvatarSize / 2
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -180,6 +182,23 @@ private fun GuestProfileHeader(
                     .align(Alignment.TopCenter)
                     .zIndex(0f)
             )
+
+            if (onBack != null) {
+                IconButton(
+                    onClick = onBack,
+                    modifier = Modifier
+                        .statusBarsPadding()
+                        .padding(start = 8.dp, top = 4.dp)
+                        .align(Alignment.TopStart)
+                        .zIndex(3f)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
+                        contentDescription = "Voltar",
+                        tint = MindInkWhite
+                    )
+                }
+            }
 
             Box(
                 modifier = Modifier

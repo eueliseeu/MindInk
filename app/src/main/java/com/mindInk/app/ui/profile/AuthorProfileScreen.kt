@@ -22,7 +22,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.outlined.Visibility
-import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
@@ -44,7 +43,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.R
-import com.mindInk.app.core.normalizeSocialProfileUrl
+import com.mindInk.app.core.normalizeGithubProfileUrl
+import com.mindInk.app.core.normalizeLinkedInProfileUrl
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.formatCount
@@ -76,8 +76,6 @@ fun AuthorProfileScreen(
         viewModel.load(authorUid)
     }
 
-    // O ViewModel é reaproveitado entre perfis: até o load() rodar, o estado ainda
-    // pertence ao perfil anterior e não pode ser exibido.
     val isLoading = state.isLoading || state.authorUid != authorUid
 
     val displayName = state.authorName.ifBlank {
@@ -136,7 +134,8 @@ fun AuthorProfileScreen(
                     item(key = "header") {
                         StandardProfileHeader(
                             name = displayName,
-                            photoUrl = state.authorPhotoUrl ?: user.photoUrl.takeIf { isOwnProfile },
+                            photoUrl = state.authorPhotoUrl
+                                ?: user.photoUrl.takeIf { isOwnProfile },
                             githubUrl = state.githubUrl,
                             linkedinUrl = state.linkedinUrl,
                             isOwnProfile = isOwnProfile,
@@ -239,8 +238,8 @@ fun StandardProfileHeader(
     onBack: (() -> Unit)? = null
 ) {
     val uriHandler = LocalUriHandler.current
-    val githubLink = normalizeSocialProfileUrl(githubUrl, "github")
-    val linkedinLink = normalizeSocialProfileUrl(linkedinUrl, "linkedin")
+    val githubLink = normalizeGithubProfileUrl(githubUrl)
+    val linkedinLink = normalizeLinkedInProfileUrl(linkedinUrl)
     val overlap = AvatarSize / 2
 
     Column(modifier = Modifier.fillMaxWidth()) {
@@ -357,7 +356,7 @@ fun StandardProfileHeader(
                             onClick = { uriHandler.openUri(linkedinLink) },
                             modifier = Modifier.size(36.dp)
                         ) {
-                             Image(
+                            Image(
                                 painter = painterResource(R.drawable.linkedin),
                                 contentDescription = "Linkedin",
                                 modifier = Modifier.size(20.dp)
