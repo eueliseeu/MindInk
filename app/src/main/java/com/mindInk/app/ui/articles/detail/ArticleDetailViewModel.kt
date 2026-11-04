@@ -7,6 +7,7 @@ import com.mindInk.app.data.reading.PendingReadingStore
 import com.mindInk.app.domain.repository.RecordArticleViewResult
 import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
+import com.mindInk.app.domain.usecase.article.GetArticleContentUseCase
 import com.mindInk.app.domain.usecase.article.RecordArticleViewUseCase
 import com.mindInk.app.domain.usecase.article.ToggleStarUseCase
 import com.mindInk.app.domain.usecase.auth.ObserveAuthStateUseCase
@@ -15,6 +16,8 @@ import com.mindInk.app.domain.usecase.reading.UpsertReadingProgressUseCase
 import com.mindInk.app.domain.usecase.star.ObserveStarredArticleIdsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,10 +26,13 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val TAG = "ArticleDetailVM"
+private const val NOT_FOUND_MESSAGE = "Artigo não encontrado."
+private const val CONTENT_ERROR_MESSAGE = "Não foi possível carregar o conteúdo do artigo."
 
 @HiltViewModel
 class ArticleDetailViewModel @Inject constructor(
     private val getArticleById: GetArticleByIdUseCase,
+    private val getArticleContent: GetArticleContentUseCase,
     private val toggleStarUseCase: ToggleStarUseCase,
     private val recordArticleView: RecordArticleViewUseCase,
     private val observeAuthState: ObserveAuthStateUseCase,
@@ -89,14 +95,37 @@ class ArticleDetailViewModel @Inject constructor(
 
     fun load() {
         if (articleId.isBlank()) return
+        val targetId = articleId
+        val alreadyLoaded = _uiState.value.article?.id == targetId
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val article = getArticleById(articleId)
+            if (!alreadyLoaded) {
+                _uiState.update { it.copy(isLoading = true, errorMessage = null, content = "") }
+            }
+
+            val needsContent = !alreadyLoaded || _uiState.value.content.isBlank()
+            val (article, content) = coroutineScope {
+                val articleDeferred = async { getArticleById(targetId) }
+                val contentDeferred = if (needsContent) async { getArticleContent(targetId) } else null
+                articleDeferred.await() to contentDeferred?.await()
+            }
+            if (articleId != targetId) return@launch
+
+            val current = _uiState.value
+            val resolvedArticle = article ?: current.article.takeIf { alreadyLoaded }
+            val resolvedContent = content ?: current.content
+            val message = when {
+                resolvedArticle == null -> NOT_FOUND_MESSAGE
+                resolvedContent.isBlank() -> CONTENT_ERROR_MESSAGE
+                else -> null
+            }
+
             _uiState.update {
                 it.copy(
                     isLoading = false,
-                    article = article,
-                    errorMessage = if (article == null) "Artigo não encontrado." else null
+                    article = if (message == null) resolvedArticle else null,
+                    content = resolvedContent,
+                    errorMessage = message
                 )
             }
             tryRecordView()
@@ -140,6 +169,7 @@ class ArticleDetailViewModel @Inject constructor(
         }
     }
 
+    
     private fun syncStarFlag() {
         val actual = articleId.isNotBlank() && articleId in starredIds
         if (expectedStar == actual) expectedStar = null
@@ -156,18 +186,7 @@ class ArticleDetailViewModel @Inject constructor(
 
         readingStarted = true
         viewModelScope.launch {
-            upsertReadingProgress(
-                uid = uid,
-                articleId = article.id,
-                title = article.title,
-                category = article.category,
-                summary = article.subtitle.ifBlank { article.preview(120) },
-                authorName = article.authorName,
-                authorPhotoUrl = article.authorPhotoUrl,
-                starCount = article.starCount,
-                viewCount = article.viewCount,
-                progress = 0f
-            )
+            upsertReadingProgress(uid = uid, articleId = article.id, progress = 0f)
         }
     }
 

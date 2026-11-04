@@ -58,7 +58,7 @@ fun GuestArticleDetailScreen(
             .navigationBarsPadding()
     ) {
         MindInkTopBar(
-            screenTitle = "/ Lendo o Art.",
+            screenTitle = "Lendo o Art.",
             user = null,
             onBack = onBack,
             showSearch = false,
@@ -125,7 +125,7 @@ fun GuestArticleDetailScreen(
                     Spacer(modifier = Modifier.height(20.dp))
 
                     Markdown(
-                        content = previewHalfContent(article.content),
+                        content = previewHalfContent(state.content),
                         modifier = Modifier.fillMaxWidth()
                     )
 
