@@ -111,9 +111,8 @@ fun CreateEditArticleScreen(
             .navigationBarsPadding()
     ) {
         MindInkTopBar(
-            screenTitle = if (state.isEditMode) "/ Editar Artigo" else "/ Novo Artigo",
+            screenTitle = if (state.isEditMode) "Editar Artigo" else "Novo Artigo",
             user = user,
-            onBack = onBack,
             showSearch = false,
             showUserMenu = true,
             onSignOut = onSignOut,

@@ -41,7 +41,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -115,7 +114,7 @@ fun CommunityArticlesScreen(
         derivedStateOf { listState.firstVisibleItemIndex >= SCROLL_TOP_THRESHOLD }
     }
 
-    LaunchedEffect(listState, state.hasMore, state.isLoadingMore) {
+    LaunchedEffect(listState, state.hasMore, state.isLoadingMore, state.isLoading) {
         snapshotFlow {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             val total = listState.layoutInfo.totalItemsCount
@@ -145,173 +144,181 @@ fun CommunityArticlesScreen(
                 onSettingsClick = onSettingsClick
             )
 
-            if (state.isLoading && state.articles.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center
-                ) {
-                    CircularProgressIndicator(color = MindInkWhite)
+            LazyColumn(
+                state = listState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentPadding = PaddingValues(
+                    top = 4.dp,
+                    bottom = 100.dp + navigationBarPadding
+                )
+            ) {
+                item(key = "greeting") {
+                    GreetingHeader(firstName = displayName)
                 }
-            } else {
-                LazyColumn(
-                    state = listState,
-                    modifier = Modifier
-                        .weight(1f)
-                        .fillMaxWidth(),
-                    contentPadding = PaddingValues(
-                        top = 4.dp,
-                        bottom = 100.dp + navigationBarPadding
-                    )
-                ) {
-                    item(key = "greeting") {
-                        GreetingHeader(firstName = displayName)
-                    }
 
-                    item(key = "filter") {
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clip(RoundedCornerShape(28.dp))
-                                    .background(MindInkWhite)
-                                    .clickable(
-                                        role = Role.Button,
-                                        onClick = { filterExpanded = true }
-                                    )
-                                    .padding(horizontal = 20.dp, vertical = 14.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = filterLabel,
-                                    color = MindInkBackground,
-                                    fontSize = 16.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    modifier = Modifier.weight(1f)
-                                )
-                                Icon(
-                                    imageVector = Icons.Rounded.KeyboardArrowDown,
-                                    contentDescription = "Abrir filtro de categoria",
-                                    tint = MindInkBackground,
-                                    modifier = Modifier.size(22.dp)
-                                )
-                            }
-
-                            DropdownMenu(
-                                expanded = filterExpanded,
-                                onDismissRequest = { filterExpanded = false },
-                                modifier = Modifier.background(MindInkSurface)
-                            ) {
-                                CategoryOptions.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = {
-                                            Text(
-                                                text = option ?: "Comunidade",
-                                                color = MindInkWhite,
-                                                fontSize = 15.sp
-                                            )
-                                        },
-                                        onClick = {
-                                            viewModel.onCategorySelected(option)
-                                            filterExpanded = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    }
-
-                    item(key = "search") {
-                        Spacer(modifier = Modifier.height(12.dp))
+                item(key = "filter") {
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                    ) {
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(horizontal = 20.dp)
                                 .clip(RoundedCornerShape(28.dp))
-                                .border(1.dp, MindInkBorder, RoundedCornerShape(28.dp))
-                                .background(MindInkSurface)
-                                .padding(horizontal = 8.dp, vertical = 4.dp),
+                                .background(MindInkWhite)
+                                .clickable(
+                                    role = Role.Button,
+                                    onClick = { filterExpanded = true }
+                                )
+                                .padding(horizontal = 20.dp, vertical = 14.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            BasicTextField(
-                                value = state.searchQuery,
-                                onValueChange = viewModel::onSearchQueryChange,
-                                singleLine = true,
-                                cursorBrush = SolidColor(MindInkWhite),
-                                textStyle = TextStyle(
-                                    color = MindInkWhite,
-                                    fontSize = 15.sp
-                                ),
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                                keyboardActions = KeyboardActions(
-                                    onSearch = { focusManager.clearFocus() }
-                                ),
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .padding(horizontal = 8.dp, vertical = 10.dp),
-                                decorationBox = { inner ->
-                                    if (state.searchQuery.isEmpty()) {
+                            Text(
+                                text = filterLabel,
+                                color = MindInkBackground,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Medium,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Icon(
+                                imageVector = Icons.Rounded.KeyboardArrowDown,
+                                contentDescription = "Abrir filtro de categoria",
+                                tint = MindInkBackground,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+
+                        DropdownMenu(
+                            expanded = filterExpanded,
+                            onDismissRequest = { filterExpanded = false },
+                            modifier = Modifier.background(MindInkSurface)
+                        ) {
+                            CategoryOptions.forEach { option ->
+                                DropdownMenuItem(
+                                    text = {
                                         Text(
-                                            text = "Buscar artigos",
-                                            color = MindInkMuted,
+                                            text = option ?: "Comunidade",
+                                            color = MindInkWhite,
                                             fontSize = 15.sp
                                         )
+                                    },
+                                    onClick = {
+                                        viewModel.onCategorySelected(option)
+                                        filterExpanded = false
                                     }
-                                    inner()
-                                }
-                            )
-                            if (state.searchQuery.isNotEmpty()) {
-                                IconButton(
-                                    onClick = viewModel::clearSearch,
-                                    modifier = Modifier.size(40.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.Close,
-                                        contentDescription = "Limpar busca",
-                                        tint = MindInkMuted,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                }
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Rounded.Search,
-                                    contentDescription = "Buscar",
-                                    tint = MindInkMuted,
-                                    modifier = Modifier
-                                        .padding(end = 8.dp)
-                                        .size(20.dp)
                                 )
                             }
                         }
-                        if (state.searchQuery.isNotBlank()) {
-                            Text(
-                                text = "Busca nos artigos já carregados.",
-                                color = MindInkMuted,
-                                fontSize = 12.sp,
-                                modifier = Modifier.padding(
-                                    horizontal = 24.dp,
-                                    vertical = 6.dp
+                    }
+                }
+
+                item(key = "search") {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp)
+                            .clip(RoundedCornerShape(28.dp))
+                            .border(1.dp, MindInkBorder, RoundedCornerShape(28.dp))
+                            .background(MindInkSurface)
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        BasicTextField(
+                            value = state.searchQuery,
+                            onValueChange = viewModel::onSearchQueryChange,
+                            singleLine = true,
+                            cursorBrush = SolidColor(MindInkWhite),
+                            textStyle = TextStyle(
+                                color = MindInkWhite,
+                                fontSize = 15.sp
+                            ),
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                            keyboardActions = KeyboardActions(
+                                onSearch = { focusManager.clearFocus() }
+                            ),
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp, vertical = 10.dp),
+                            decorationBox = { inner ->
+                                if (state.searchQuery.isEmpty()) {
+                                    Text(
+                                        text = "Buscar artigos",
+                                        color = MindInkMuted,
+                                        fontSize = 15.sp
+                                    )
+                                }
+                                inner()
+                            }
+                        )
+                        if (state.searchQuery.isNotEmpty()) {
+                            IconButton(
+                                onClick = viewModel::clearSearch,
+                                modifier = Modifier.size(40.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Rounded.Close,
+                                    contentDescription = "Limpar busca",
+                                    tint = MindInkMuted,
+                                    modifier = Modifier.size(18.dp)
                                 )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = Icons.Rounded.Search,
+                                contentDescription = "Buscar",
+                                tint = MindInkMuted,
+                                modifier = Modifier
+                                    .padding(end = 8.dp)
+                                    .size(20.dp)
                             )
                         }
                     }
-
-                    item(key = "section_title") {
-                        Spacer(modifier = Modifier.height(20.dp))
+                    if (state.searchQuery.isNotBlank()) {
                         Text(
-                            text = "Artigos",
-                            color = MindInkWhite,
-                            fontSize = 20.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            modifier = Modifier.padding(horizontal = 20.dp)
+                            text = "Busca nos artigos já carregados.",
+                            color = MindInkMuted,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(
+                                horizontal = 24.dp,
+                                vertical = 6.dp
+                            )
                         )
-                        Spacer(modifier = Modifier.height(8.dp))
                     }
+                }
 
+                item(key = "section_title") {
+                    Spacer(modifier = Modifier.height(20.dp))
+                    Text(
+                        text = "Artigos",
+                        color = MindInkWhite,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(horizontal = 20.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
+                if (state.isLoading) {
+                    item(key = "list_loading") {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            CircularProgressIndicator(
+                                color = MindInkWhite,
+                                modifier = Modifier.size(28.dp),
+                                strokeWidth = 2.dp
+                            )
+                        }
+                    }
+                } else {
                     val visible = state.visibleArticles
                     if (visible.isEmpty()) {
                         item(key = "empty") {
@@ -326,7 +333,10 @@ fun CommunityArticlesScreen(
                             )
                         }
                     } else {
-                        items(visible, key = { it.id }) { article ->
+                        items(
+                            items = visible,
+                            key = { it.id }
+                        ) { article ->
                             ExploreArticleRow(
                                 article = article,
                                 currentUid = user.uid,

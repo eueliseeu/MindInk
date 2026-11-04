@@ -3,8 +3,11 @@ package com.mindInk.app.ui.articles.community
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.domain.repository.LoadArticlesPageResult
+import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
+import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
 import com.mindInk.app.ui.articles.mapper.toCardUi
+import com.mindInk.app.ui.articles.model.ArticleCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,10 +18,12 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 private const val PAGE_SIZE = 10L
+private const val REALTIME_LIMIT = 40L
 
 @HiltViewModel
 class CommunityArticlesViewModel @Inject constructor(
-    private val loadArticlesPage: LoadArticlesPageUseCase
+    private val loadArticlesPage: LoadArticlesPageUseCase,
+    private val observeArticles: ObserveArticlesUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CommunityArticlesUiState())
@@ -29,7 +34,8 @@ class CommunityArticlesViewModel @Inject constructor(
     private var isLoadingMoreInternal = false
 
     init {
-        refresh()
+        refresh(clearList = true)
+        observeRealtimeCounts()
     }
 
     fun onCategorySelected(category: String?) {
@@ -37,14 +43,12 @@ class CommunityArticlesViewModel @Inject constructor(
         _uiState.update {
             it.copy(
                 selectedCategory = category,
-                articles = emptyList(),
-                isLoading = true,
                 hasMore = true,
                 errorMessage = null
             )
         }
         cursorId = null
-        refresh()
+        refresh(clearList = false)
     }
 
     fun onSearchQueryChange(query: String) {
@@ -79,10 +83,9 @@ class CommunityArticlesViewModel @Inject constructor(
                             cursorId = page.nextCursorId
                         }
                         _uiState.update { state ->
-                            val merged = appendUnique(state.articles, newCards)
                             state.copy(
                                 isLoadingMore = false,
-                                articles = merged,
+                                articles = appendUnique(state.articles, newCards),
                                 hasMore = page.hasMore,
                                 errorMessage = null
                             )
@@ -103,26 +106,28 @@ class CommunityArticlesViewModel @Inject constructor(
         }
     }
 
-    fun refresh() {
+    fun refresh(clearList: Boolean = true) {
         loadJob?.cancel()
         isLoadingMoreInternal = false
         cursorId = null
+
         _uiState.update {
             it.copy(
                 isLoading = true,
                 isLoadingMore = false,
-                articles = emptyList(),
+                articles = if (clearList) emptyList() else it.articles,
                 hasMore = true,
                 errorMessage = null
             )
         }
 
+        val category = _uiState.value.selectedCategory
         loadJob = viewModelScope.launch {
             when (
                 val result = loadArticlesPage(
                     pageSize = PAGE_SIZE,
                     startAfterDocumentId = null,
-                    category = _uiState.value.selectedCategory
+                    category = category
                 )
             ) {
                 is LoadArticlesPageResult.Success -> {
@@ -141,6 +146,7 @@ class CommunityArticlesViewModel @Inject constructor(
                     _uiState.update {
                         it.copy(
                             isLoading = false,
+                            articles = if (clearList) emptyList() else it.articles,
                             errorMessage = result.message
                         )
                     }
@@ -149,10 +155,34 @@ class CommunityArticlesViewModel @Inject constructor(
         }
     }
 
+    private fun observeRealtimeCounts() {
+        viewModelScope.launch {
+            observeArticles(REALTIME_LIMIT).collect { result ->
+                if (result !is ObserveArticlesResult.Success) return@collect
+                val live = result.articles.associateBy { it.id }
+                if (live.isEmpty()) return@collect
+                _uiState.update { state ->
+                    val updated = state.articles.map { card ->
+                        val article = live[card.id] ?: return@map card
+                        card.copy(
+                            starCount = article.starCount,
+                            viewCount = article.viewCount,
+                            title = article.title,
+                            summary = article.subtitle.ifBlank { card.summary },
+                            authorName = article.authorName.ifBlank { card.authorName },
+                            authorPhotoUrl = article.authorPhotoUrl ?: card.authorPhotoUrl
+                        )
+                    }
+                    state.copy(articles = updated)
+                }
+            }
+        }
+    }
+
     private fun appendUnique(
-        current: List<com.mindInk.app.ui.articles.model.ArticleCardUi>,
-        incoming: List<com.mindInk.app.ui.articles.model.ArticleCardUi>
-    ): List<com.mindInk.app.ui.articles.model.ArticleCardUi> {
+        current: List<ArticleCardUi>,
+        incoming: List<ArticleCardUi>
+    ): List<ArticleCardUi> {
         val ids = current.map { it.id }.toHashSet()
         return current + incoming.filter { it.id !in ids }
     }
