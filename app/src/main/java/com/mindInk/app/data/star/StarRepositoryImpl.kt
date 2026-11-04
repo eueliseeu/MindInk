@@ -84,8 +84,9 @@ class StarRepositoryImpl @Inject constructor(
             val star = transaction.get(starRef)
 
             val authorUid = article.getString("authorUid").orEmpty()
+            val isOwnArticle = authorUid == uid
             val favorite = authorUid
-                .takeIf { it.isNotBlank() && it != uid }
+                .takeIf { it.isNotBlank() && !isOwnArticle }
                 ?.let { id ->
                     val ref = firestore.favoriteAuthors(uid).document(id)
                     ref to transaction.get(ref)
@@ -95,14 +96,12 @@ class StarRepositoryImpl @Inject constructor(
             val count = (article.getLong("starCount") ?: 0L).toInt()
 
             if (starred) {
-                transaction.set(
-                    starRef,
-                    mapOf(
-                        STAR_FIELD_ARTICLE_ID to articleId,
-                        STAR_FIELD_AUTHOR_UID to authorUid,
-                        STAR_FIELD_CREATED_AT to FieldValue.serverTimestamp()
-                    )
-                )
+                val starData = buildMap<String, Any> {
+                    put(STAR_FIELD_ARTICLE_ID, articleId)
+                    if (!isOwnArticle) put(STAR_FIELD_AUTHOR_UID, authorUid)
+                    put(STAR_FIELD_CREATED_AT, FieldValue.serverTimestamp())
+                }
+                transaction.set(starRef, starData)
                 transaction.update(articleRef, "starCount", count + 1)
             } else {
                 transaction.delete(starRef)
@@ -113,9 +112,7 @@ class StarRepositoryImpl @Inject constructor(
                 transaction.applyStarToFavorite(
                     favoriteRef = ref,
                     favorite = snapshot,
-                    article = article,
-                    starred = starred,
-                    now = System.currentTimeMillis()
+                    starred = starred
                 )
             }
         }.await()
