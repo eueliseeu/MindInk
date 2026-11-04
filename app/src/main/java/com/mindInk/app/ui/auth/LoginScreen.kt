@@ -46,7 +46,7 @@ fun LoginScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Image(
-            painter = painterResource(id = R.drawable.beta_login),
+            painter = painterResource(id = R.drawable.home),
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier.fillMaxSize()
@@ -78,11 +78,6 @@ fun LoginScreen(
         ) {
             Spacer(modifier = Modifier.weight(1f))
 
-            Image(
-                painter = painterResource(id = R.drawable.ic_mindink_logo),
-                contentDescription = "MindInk",
-                modifier = Modifier.size(72.dp)
-            )
 
             Spacer(modifier = Modifier.height(20.dp))
 

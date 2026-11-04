@@ -1,3 +1,4 @@
+
 package com.mindInk.app.ui.home
 
 import androidx.compose.foundation.background
@@ -10,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
@@ -93,44 +95,61 @@ fun GuestArticleDetailScreen(
                         .padding(horizontal = ContentHorizontalPadding)
                         .padding(bottom = 28.dp)
                 ) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(12.dp))
 
-                    Text(
-                        text = "Escritor: ${formatAuthorName(article.authorName)}",
-                        color = MindInkMuted,
-                        fontSize = 13.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    Text(
-                        text = article.title,
-                        color = MindInkWhite,
-                        fontSize = 26.sp,
-                        lineHeight = 32.sp,
-                        fontWeight = FontWeight.Bold
-                    )
-
-                    if (article.subtitle.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                    // Cabeçalho do artigo
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(
+                                color = MaterialTheme.colorScheme.surface,
+                                shape = RoundedCornerShape(16.dp)
+                            )
+                            .padding(18.dp)
+                    ) {
                         Text(
-                            text = article.subtitle,
+                            text = "Escritor: ${formatAuthorName(article.authorName)}",
                             color = MindInkMuted,
-                            fontSize = 15.sp,
-                            lineHeight = 20.sp
+                            fontSize = 13.sp
                         )
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Text(
+                            text = article.title,
+                            color = MindInkWhite,
+                            fontSize = 26.sp,
+                            lineHeight = 32.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+
+                        if (article.subtitle.isNotBlank()) {
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            Text(
+                                text = article.subtitle,
+                                color = MindInkMuted,
+                                fontSize = 15.sp,
+                                lineHeight = 21.sp
+                            )
+                        }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(24.dp))
 
                     Markdown(
                         content = previewHalfContent(state.content),
-                        modifier = Modifier.fillMaxWidth()
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 18.dp)
                     )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    HorizontalDivider(thickness = 1.dp, color = MindInkBorder)
+                    HorizontalDivider(
+                        thickness = 1.dp,
+                        color = MindInkBorder
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -140,14 +159,18 @@ fun GuestArticleDetailScreen(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+
                     Spacer(modifier = Modifier.height(4.dp))
+
                     Text(
                         text = "Quer continuar lendo?",
                         color = MindInkWhite,
                         fontSize = 18.sp,
                         fontWeight = FontWeight.SemiBold
                     )
+
                     Spacer(modifier = Modifier.height(12.dp))
+
                     Text(
                         text = "Crie sua conta ou faça o login, para que seja liberado também a automação de leitura por voz.",
                         color = MindInkMuted,
