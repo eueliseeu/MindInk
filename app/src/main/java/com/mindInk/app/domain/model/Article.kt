@@ -8,15 +8,9 @@ data class Article(
     val category: String = "",
     val title: String,
     val subtitle: String = "",
-    val content: String,
+    val excerpt: String = "",
     val starCount: Int = 0,
     val viewCount: Int = 0,
     val createdAt: Long,
     val updatedAt: Long = 0L
-) {
-    fun preview(maxChars: Int = 160): String {
-        val text = content.trim()
-        if (text.length <= maxChars) return text
-        return text.take(maxChars).trimEnd() + "…"
-    }
-}
+)
