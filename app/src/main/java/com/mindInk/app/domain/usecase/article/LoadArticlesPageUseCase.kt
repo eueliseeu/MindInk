@@ -9,7 +9,8 @@ class LoadArticlesPageUseCase @Inject constructor(
 ) {
     suspend operator fun invoke(
         pageSize: Long = 10,
-        startAfterDocumentId: String? = null
+        startAfterDocumentId: String? = null,
+        category: String? = null
     ): LoadArticlesPageResult =
-        repository.loadArticlesPage(pageSize, startAfterDocumentId)
+        repository.loadArticlesPage(pageSize, startAfterDocumentId, category)
 }

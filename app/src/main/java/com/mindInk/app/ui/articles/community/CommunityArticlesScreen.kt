@@ -21,15 +21,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.Search
@@ -38,6 +40,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -48,23 +51,27 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.domain.model.ArticleCategories
 import com.mindInk.app.domain.model.AuthUser
-import com.mindInk.app.ui.articles.ArticlesViewModel
 import com.mindInk.app.ui.articles.components.ExploreArticleRow
 import com.mindInk.app.ui.articles.model.ArticleCardUi
+import com.mindInk.app.ui.components.GreetingHeader
 import com.mindInk.app.ui.components.MindInkTopBar
 import com.mindInk.app.ui.theme.MindInkBackground
 import com.mindInk.app.ui.theme.MindInkBorder
@@ -74,7 +81,7 @@ import com.mindInk.app.ui.theme.MindInkWhite
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.launch
 
-private val FilterOptions = listOf("Comunidade") + ArticleCategories.ALL
+private val CategoryOptions = listOf<String?>(null) + ArticleCategories.ALL
 private const val SCROLL_TOP_THRESHOLD = 8
 
 @Composable
@@ -85,58 +92,39 @@ fun CommunityArticlesScreen(
     onProfileClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
     onArticleClick: (ArticleCardUi) -> Unit,
-    viewModel: ArticlesViewModel = hiltViewModel()
+    onCreateArticleClick: () -> Unit,
+    viewModel: CommunityArticlesViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
+    val focusManager = LocalFocusManager.current
     val navigationBarPadding =
         WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
-    var selectedFilter by remember { mutableStateOf("Comunidade") }
-    var searchQuery by remember { mutableStateOf("") }
-    var filterExpanded by remember { mutableStateOf(false) }
+    var filterExpanded by rememberSaveable { mutableStateOf(false) }
 
     val displayName = formatAuthorName(user.displayName ?: user.email)
         .trim()
         .split(" ")
         .first()
 
-    val filteredArticles by remember(state.exploreArticles, selectedFilter, searchQuery) {
-        derivedStateOf {
-            state.exploreArticles
-                .asSequence()
-                .filter { article ->
-                    selectedFilter == "Comunidade" ||
-                        article.category.equals(selectedFilter, ignoreCase = true)
-                }
-                .filter { article ->
-                    val q = searchQuery.trim()
-                    if (q.isEmpty()) return@filter true
-                    article.title.contains(q, ignoreCase = true) ||
-                        article.summary.contains(q, ignoreCase = true) ||
-                        article.authorName.contains(q, ignoreCase = true)
-                }
-                .toList()
-        }
-    }
+    val filterLabel = state.selectedCategory ?: "Comunidade"
 
     val showScrollTop by remember {
-        derivedStateOf {
-            listState.firstVisibleItemIndex >= SCROLL_TOP_THRESHOLD
-        }
+        derivedStateOf { listState.firstVisibleItemIndex >= SCROLL_TOP_THRESHOLD }
     }
 
-    LaunchedEffect(listState) {
+    LaunchedEffect(listState, state.hasMore, state.isLoadingMore) {
         snapshotFlow {
             val lastVisible = listState.layoutInfo.visibleItemsInfo.lastOrNull()?.index ?: 0
             val total = listState.layoutInfo.totalItemsCount
-            lastVisible >= total - 3
+            lastVisible >= (total - 3).coerceAtLeast(0)
         }
             .distinctUntilChanged()
             .collect { nearEnd ->
-                if (nearEnd && state.hasMoreExplore && !state.isLoadingMore) {
-                    viewModel.loadMoreExplore()
+                if (nearEnd && state.hasMore && !state.isLoadingMore && !state.isLoading) {
+                    viewModel.loadMore()
                 }
             }
     }
@@ -150,13 +138,14 @@ fun CommunityArticlesScreen(
             MindInkTopBar(
                 screenTitle = "MindInk.",
                 user = user,
+                onBack = onBack,
                 showSearch = false,
                 onSignOut = onSignOut,
                 onProfileClick = onProfileClick,
                 onSettingsClick = onSettingsClick
             )
 
-            if (state.isLoading && state.exploreArticles.isEmpty()) {
+            if (state.isLoading && state.articles.isEmpty()) {
                 Box(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
@@ -171,52 +160,11 @@ fun CommunityArticlesScreen(
                         .fillMaxWidth(),
                     contentPadding = PaddingValues(
                         top = 4.dp,
-                        bottom = 88.dp + navigationBarPadding
+                        bottom = 100.dp + navigationBarPadding
                     )
                 ) {
                     item(key = "greeting") {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 20.dp, vertical = 8.dp)
-                        ) {
-                            Text(
-                                text = "Bem-vindo(a) de volta",
-                                color = MindInkMuted,
-                                fontSize = 14.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            Text(
-                                text = "Olá, $displayName",
-                                color = MindInkWhite,
-                                fontSize = 28.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-
-                            if (onSettingsClick != null) {
-                                Spacer(modifier = Modifier.height(2.dp))
-                                Row(
-                                    modifier = Modifier
-                                        .clip(RoundedCornerShape(4.dp))
-                                        .clickable { onSettingsClick() }
-                                        .padding(vertical = 2.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Text(
-                                        text = "Minhas Configurações",
-                                        color = MindInkMuted,
-                                        fontSize = 12.sp
-                                    )
-                                    Spacer(modifier = Modifier.width(2.dp))
-                                    Icon(
-                                        imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
-                                        contentDescription = null,
-                                        tint = MindInkMuted,
-                                        modifier = Modifier.size(14.dp)
-                                    )
-                                }
-                            }
-                        }
+                        GreetingHeader(firstName = displayName)
                     }
 
                     item(key = "filter") {
@@ -231,12 +179,15 @@ fun CommunityArticlesScreen(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(28.dp))
                                     .background(MindInkWhite)
-                                    .clickable { filterExpanded = true }
+                                    .clickable(
+                                        role = Role.Button,
+                                        onClick = { filterExpanded = true }
+                                    )
                                     .padding(horizontal = 20.dp, vertical = 14.dp),
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = selectedFilter,
+                                    text = filterLabel,
                                     color = MindInkBackground,
                                     fontSize = 16.sp,
                                     fontWeight = FontWeight.Medium,
@@ -244,7 +195,7 @@ fun CommunityArticlesScreen(
                                 )
                                 Icon(
                                     imageVector = Icons.Rounded.KeyboardArrowDown,
-                                    contentDescription = null,
+                                    contentDescription = "Abrir filtro de categoria",
                                     tint = MindInkBackground,
                                     modifier = Modifier.size(22.dp)
                                 )
@@ -253,21 +204,19 @@ fun CommunityArticlesScreen(
                             DropdownMenu(
                                 expanded = filterExpanded,
                                 onDismissRequest = { filterExpanded = false },
-                                modifier = Modifier
-                                    .fillMaxWidth(0.9f)
-                                    .background(MindInkSurface)
+                                modifier = Modifier.background(MindInkSurface)
                             ) {
-                                FilterOptions.forEach { option ->
+                                CategoryOptions.forEach { option ->
                                     DropdownMenuItem(
                                         text = {
                                             Text(
-                                                text = option,
+                                                text = option ?: "Comunidade",
                                                 color = MindInkWhite,
                                                 fontSize = 15.sp
                                             )
                                         },
                                         onClick = {
-                                            selectedFilter = option
+                                            viewModel.onCategorySelected(option)
                                             filterExpanded = false
                                         }
                                     )
@@ -285,21 +234,27 @@ fun CommunityArticlesScreen(
                                 .clip(RoundedCornerShape(28.dp))
                                 .border(1.dp, MindInkBorder, RoundedCornerShape(28.dp))
                                 .background(MindInkSurface)
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
+                                .padding(horizontal = 8.dp, vertical = 4.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             BasicTextField(
-                                value = searchQuery,
-                                onValueChange = { searchQuery = it },
+                                value = state.searchQuery,
+                                onValueChange = viewModel::onSearchQueryChange,
                                 singleLine = true,
                                 cursorBrush = SolidColor(MindInkWhite),
                                 textStyle = TextStyle(
                                     color = MindInkWhite,
                                     fontSize = 15.sp
                                 ),
-                                modifier = Modifier.weight(1f),
+                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                                keyboardActions = KeyboardActions(
+                                    onSearch = { focusManager.clearFocus() }
+                                ),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp, vertical = 10.dp),
                                 decorationBox = { inner ->
-                                    if (searchQuery.isEmpty()) {
+                                    if (state.searchQuery.isEmpty()) {
                                         Text(
                                             text = "Buscar artigos",
                                             color = MindInkMuted,
@@ -309,17 +264,44 @@ fun CommunityArticlesScreen(
                                     inner()
                                 }
                             )
-                            Icon(
-                                imageVector = Icons.Rounded.Search,
-                                contentDescription = null,
-                                tint = MindInkMuted,
-                                modifier = Modifier.size(20.dp)
+                            if (state.searchQuery.isNotEmpty()) {
+                                IconButton(
+                                    onClick = viewModel::clearSearch,
+                                    modifier = Modifier.size(40.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.Close,
+                                        contentDescription = "Limpar busca",
+                                        tint = MindInkMuted,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Rounded.Search,
+                                    contentDescription = "Buscar",
+                                    tint = MindInkMuted,
+                                    modifier = Modifier
+                                        .padding(end = 8.dp)
+                                        .size(20.dp)
+                                )
+                            }
+                        }
+                        if (state.searchQuery.isNotBlank()) {
+                            Text(
+                                text = "Busca nos artigos já carregados.",
+                                color = MindInkMuted,
+                                fontSize = 12.sp,
+                                modifier = Modifier.padding(
+                                    horizontal = 24.dp,
+                                    vertical = 6.dp
+                                )
                             )
                         }
                     }
 
                     item(key = "section_title") {
-                        Spacer(modifier = Modifier.height(24.dp))
+                        Spacer(modifier = Modifier.height(20.dp))
                         Text(
                             text = "Artigos",
                             color = MindInkWhite,
@@ -330,10 +312,11 @@ fun CommunityArticlesScreen(
                         Spacer(modifier = Modifier.height(8.dp))
                     }
 
-                    if (filteredArticles.isEmpty()) {
+                    val visible = state.visibleArticles
+                    if (visible.isEmpty()) {
                         item(key = "empty") {
                             Text(
-                                text = "Nenhum artigo encontrado.",
+                                text = state.errorMessage ?: "Nenhum artigo encontrado.",
                                 color = MindInkMuted,
                                 fontSize = 14.sp,
                                 modifier = Modifier.padding(
@@ -343,10 +326,7 @@ fun CommunityArticlesScreen(
                             )
                         }
                     } else {
-                        items(
-                            items = filteredArticles,
-                            key = { it.id }
-                        ) { article ->
+                        items(visible, key = { it.id }) { article ->
                             ExploreArticleRow(
                                 article = article,
                                 currentUid = user.uid,
@@ -375,30 +355,47 @@ fun CommunityArticlesScreen(
             }
         }
 
-        AnimatedVisibility(
-            visible = showScrollTop,
-            enter = fadeIn() + scaleIn(),
-            exit = fadeOut() + scaleOut(),
+        Column(
             modifier = Modifier
-                .align(Alignment.CenterEnd)
-                .padding(end = 16.dp)
-                .padding(bottom = navigationBarPadding)
+                .align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = 16.dp + navigationBarPadding),
+            horizontalAlignment = Alignment.End
         ) {
+            AnimatedVisibility(
+                visible = showScrollTop,
+                enter = fadeIn() + scaleIn(),
+                exit = fadeOut() + scaleOut()
+            ) {
+                FloatingActionButton(
+                    onClick = {
+                        scope.launch { listState.animateScrollToItem(0) }
+                    },
+                    shape = CircleShape,
+                    containerColor = MindInkWhite,
+                    contentColor = MindInkBackground,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.KeyboardArrowUp,
+                        contentDescription = "Voltar ao topo",
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
             FloatingActionButton(
-                onClick = {
-                    scope.launch {
-                        listState.animateScrollToItem(0)
-                    }
-                },
+                onClick = onCreateArticleClick,
                 shape = CircleShape,
                 containerColor = MindInkWhite,
                 contentColor = MindInkBackground,
-                modifier = Modifier.size(48.dp)
+                modifier = Modifier.size(56.dp)
             ) {
                 Icon(
-                    imageVector = Icons.Rounded.KeyboardArrowUp,
-                    contentDescription = "Voltar ao topo",
-                    modifier = Modifier.size(24.dp)
+                    imageVector = Icons.Rounded.Add,
+                    contentDescription = "Criar artigo",
+                    modifier = Modifier.size(26.dp)
                 )
             }
         }
