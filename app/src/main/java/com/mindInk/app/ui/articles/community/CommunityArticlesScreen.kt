@@ -137,7 +137,6 @@ fun CommunityArticlesScreen(
             MindInkTopBar(
                 screenTitle = "MindInk.",
                 user = user,
-                onBack = onBack,
                 showSearch = false,
                 onSignOut = onSignOut,
                 onProfileClick = onProfileClick,
@@ -150,12 +149,15 @@ fun CommunityArticlesScreen(
                     .weight(1f)
                     .fillMaxWidth(),
                 contentPadding = PaddingValues(
-                    top = 4.dp,
+                    top = 8.dp,
                     bottom = 100.dp + navigationBarPadding
                 )
             ) {
                 item(key = "greeting") {
-                    GreetingHeader(firstName = displayName)
+                    GreetingHeader(
+                        firstName = displayName,
+                        onSettingsClick = onSettingsClick
+                    )
                 }
 
                 item(key = "filter") {
