@@ -25,6 +25,7 @@ import javax.inject.Inject
 
 private const val GITHUB_PROVIDER_ID = "github.com"
 private const val GITHUB_EMAIL_SCOPE = "user:email"
+private const val RECENT_LOGIN_WINDOW_MS = 4 * 60 * 1000L
 
 internal class AuthRepositoryImpl @Inject constructor(
     private val firebaseAuth: FirebaseAuth,
@@ -53,6 +54,18 @@ internal class AuthRepositoryImpl @Inject constructor(
         firebaseAuth.addAuthStateListener(listener)
         awaitClose { firebaseAuth.removeAuthStateListener(listener) }
     }.distinctUntilChanged()
+
+    override fun currentUid(): String? = firebaseAuth.currentUser?.uid
+
+    override suspend fun hasRecentLogin(): Boolean = try {
+        val user = firebaseAuth.currentUser ?: return false
+        val authTimeMillis = user.getIdToken(false).awaitTask().authTimestamp * 1000L
+        System.currentTimeMillis() - authTimeMillis <= RECENT_LOGIN_WINDOW_MS
+    } catch (e: CancellationException) {
+        throw e
+    } catch (_: Exception) {
+        true
+    }
 
     override suspend fun signInWithGoogle(activity: Activity): SignInResult =
         googleSignIn(activity, linkOnCollision = true)
