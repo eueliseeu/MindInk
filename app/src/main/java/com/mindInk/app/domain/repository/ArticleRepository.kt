@@ -59,7 +59,8 @@ interface ArticleRepository {
 
     suspend fun loadArticlesPage(
         pageSize: Long = 10,
-        startAfterDocumentId: String? = null
+        startAfterDocumentId: String? = null,
+        category: String? = null
     ): LoadArticlesPageResult
 
     suspend fun getArticleById(articleId: String): Article?

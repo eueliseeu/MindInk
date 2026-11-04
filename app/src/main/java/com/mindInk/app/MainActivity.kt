@@ -218,6 +218,9 @@ class MainActivity : ComponentActivity() {
                                                 onSettingsClick = openAccountSettings,
                                                 onArticleClick = { card ->
                                                     selectedArticleId = card.id
+                                                },
+                                                onCreateArticleClick = {
+                                                    showCreateArticle = true
                                                 }
                                             )
                                         }

@@ -87,12 +87,20 @@ class ArticleRepositoryImpl @Inject constructor(
 
     override suspend fun loadArticlesPage(
         pageSize: Long,
-        startAfterDocumentId: String?
+        startAfterDocumentId: String?,
+        category: String?
     ): LoadArticlesPageResult {
         return try {
-            var query: Query = articles
-                .orderBy("createdAt", Query.Direction.DESCENDING)
-                .limit(pageSize)
+            var query: Query = if (!category.isNullOrBlank()) {
+                articles
+                    .whereEqualTo("category", category)
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(pageSize)
+            } else {
+                articles
+                    .orderBy("createdAt", Query.Direction.DESCENDING)
+                    .limit(pageSize)
+            }
 
             if (!startAfterDocumentId.isNullOrBlank()) {
                 val cursorSnap = articles.document(startAfterDocumentId).get().await()
