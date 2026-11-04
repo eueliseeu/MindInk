@@ -2,26 +2,64 @@ package com.mindInk.app.core
 
 import java.net.URI
 
-fun normalizeSocialProfileUrl(value: String, baseUrl: String): String? {
-    val input = value.trim().removePrefix("@").trim().trimEnd('/')
-    val base = baseUrl.trim().trimEnd('/')
-    if (input.isBlank() || base.isBlank()) return null
+fun normalizeGithubProfileUrl(value: String): String? =
+    normalizeSocialProfileUrl(
+        value = value,
+        allowedHosts = setOf("github.com"),
+        profileBase = "https://github.com"
+    )
 
-    val baseWithScheme = if (base.hasHttpScheme()) base else "https://$base"
-    val baseHost = parseUri(baseWithScheme)?.normalizedHost() ?: return null
+fun normalizeLinkedInProfileUrl(value: String): String? =
+    normalizeSocialProfileUrl(
+        value = value,
+        allowedHosts = setOf("linkedin.com"),
+        profileBase = "https://www.linkedin.com/in"
+    )
 
-    val inputHost = input.substringBefore('/').lowercase()
+fun normalizeSocialProfileUrl(
+    value: String,
+    allowedHosts: Set<String>,
+    profileBase: String
+): String? {
+    val input = value
+        .trim()
+        .removePrefix("@")
+        .trim()
+        .trimEnd('/')
+    if (input.isBlank()) return null
+
     val address = when {
         input.hasHttpScheme() -> input
-        inputHost == baseHost || inputHost == "www.$baseHost" -> "https://$input"
-        else -> "$baseWithScheme/${input.trimStart('/')}"
+        input.contains('.') -> "https://${input.trimStart('/')}"
+        else -> {
+            val username = input
+                .substringAfterLast('/')
+                .trim()
+                .takeIf { it.isNotBlank() && ' ' !in it }
+                ?: return null
+            "${profileBase.trimEnd('/')}/$username"
+        }
     }
 
     val uri = parseUri(address) ?: return null
     if (!uri.scheme.isHttpScheme()) return null
-    if (uri.normalizedHost() != baseHost) return null
 
-    return uri.toASCIIString()
+    val host = uri.normalizedHost() ?: return null
+    if (host !in allowedHosts) return null
+
+    val path = uri.path?.trim('/')?.takeIf { it.isNotBlank() } ?: return null
+    val finalPath = if (host == "linkedin.com") {
+        when {
+            path.startsWith("in/", ignoreCase = true) -> path
+            path.equals("in", ignoreCase = true) -> return null
+            else -> "in/${path.substringAfterLast('/')}"
+        }
+    } else {
+        path
+    }
+
+    val displayHost = if (host == "linkedin.com") "www.linkedin.com" else host
+    return "https://$displayHost/$finalPath"
 }
 
 private fun String.hasHttpScheme(): Boolean =
