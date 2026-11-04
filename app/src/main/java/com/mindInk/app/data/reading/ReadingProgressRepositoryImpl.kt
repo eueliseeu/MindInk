@@ -1,5 +1,7 @@
 package com.mindInk.app.data.reading
 
+import com.google.firebase.firestore.DocumentSnapshot.ServerTimestampBehavior
+import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
@@ -15,24 +17,19 @@ import kotlinx.coroutines.tasks.await
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private const val ROOT = "user_reading"
-private const val ITEMS = "items"
-
 @Singleton
 class ReadingProgressRepositoryImpl @Inject constructor(
     private val firestore: FirebaseFirestore
 ) : ReadingProgressRepository {
 
-    private fun items(uid: String) =
-        firestore.collection(ROOT).document(uid).collection(ITEMS)
-
     override fun observeContinueReading(
         uid: String,
         limit: Long
     ): Flow<ObserveReadingResult> = callbackFlow {
-        val registration = items(uid)
-            .orderBy("updatedAt", Query.Direction.DESCENDING)
-            .limit(40)
+        val registration = firestore.readingProgress(uid)
+            .whereEqualTo(READING_FIELD_COMPLETED, false)
+            .orderBy(READING_FIELD_UPDATED_AT, Query.Direction.DESCENDING)
+            .limit(limit)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(
@@ -42,30 +39,20 @@ class ReadingProgressRepositoryImpl @Inject constructor(
                     )
                     return@addSnapshotListener
                 }
-                val list = snapshot?.documents
-                    ?.mapNotNull { doc ->
-                        val dto = doc.toObject(ReadingProgressDto::class.java)
-                            ?: return@mapNotNull null
-                        if (dto.articleId.isBlank() || dto.title.isBlank()) {
-                            return@mapNotNull null
-                        }
-                        if (dto.progress >= 1f) return@mapNotNull null
+                val items = snapshot?.documents
+                    ?.map { doc ->
                         ReadingProgress(
-                            articleId = dto.articleId,
-                            title = dto.title,
-                            category = dto.category,
-                            summary = dto.summary,
-                            authorName = dto.authorName,
-                            authorPhotoUrl = dto.authorPhotoUrl,
-                            starCount = dto.starCount,
-                            viewCount = dto.viewCount,
-                            progress = dto.progress,
-                            updatedAt = dto.updatedAt
+                            articleId = doc.id,
+                            progress = (doc.getDouble(READING_FIELD_PROGRESS) ?: 0.0).toFloat(),
+                            updatedAt = doc
+                                .getTimestamp(READING_FIELD_UPDATED_AT, ServerTimestampBehavior.ESTIMATE)
+                                ?.toDate()
+                                ?.time
+                                ?: 0L
                         )
                     }
-                    ?.take(limit.toInt())
                     .orEmpty()
-                trySend(ObserveReadingResult.Success(list))
+                trySend(ObserveReadingResult.Success(items))
             }
         awaitClose { registration.remove() }
     }
@@ -73,28 +60,15 @@ class ReadingProgressRepositoryImpl @Inject constructor(
     override suspend fun upsertProgress(
         uid: String,
         articleId: String,
-        title: String,
-        category: String,
-        summary: String,
-        authorName: String,
-        authorPhotoUrl: String?,
-        starCount: Int,
-        viewCount: Int,
         progress: Float
     ): UpsertReadingResult = try {
         val clamped = progress.coerceIn(0f, 1f)
-        items(uid).document(articleId).set(
+        firestore.readingProgress(uid).document(articleId).set(
             mapOf(
-                "articleId" to articleId,
-                "title" to title,
-                "category" to category,
-                "summary" to summary,
-                "authorName" to authorName,
-                "authorPhotoUrl" to authorPhotoUrl,
-                "starCount" to starCount,
-                "viewCount" to viewCount,
-                "progress" to clamped,
-                "updatedAt" to System.currentTimeMillis()
+                READING_FIELD_ARTICLE_ID to articleId,
+                READING_FIELD_PROGRESS to clamped,
+                READING_FIELD_COMPLETED to (clamped >= 1f),
+                READING_FIELD_UPDATED_AT to FieldValue.serverTimestamp()
             ),
             SetOptions.merge()
         ).await()
@@ -111,10 +85,12 @@ class ReadingProgressRepositoryImpl @Inject constructor(
         uid: String,
         articleId: String
     ): UpsertReadingResult = try {
-        items(uid).document(articleId).set(
+        firestore.readingProgress(uid).document(articleId).set(
             mapOf(
-                "progress" to 1f,
-                "updatedAt" to System.currentTimeMillis()
+                READING_FIELD_ARTICLE_ID to articleId,
+                READING_FIELD_PROGRESS to 1f,
+                READING_FIELD_COMPLETED to true,
+                READING_FIELD_UPDATED_AT to FieldValue.serverTimestamp()
             ),
             SetOptions.merge()
         ).await()

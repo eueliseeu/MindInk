@@ -1,5 +1,6 @@
 package com.mindInk.app.data.favorite
 
+import com.google.firebase.firestore.DocumentSnapshot.ServerTimestampBehavior
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.mindInk.app.domain.model.FavoriteAuthor
@@ -33,15 +34,15 @@ class FavoriteAuthorRepositoryImpl @Inject constructor(
                     return@addSnapshotListener
                 }
                 val authors = snapshot?.documents
-                    ?.mapNotNull { doc ->
-                        doc.toObject(FavoriteAuthorDto::class.java)?.let { dto ->
-                            FavoriteAuthor(
-                                uid = doc.id,
-                                name = dto.authorName,
-                                photoUrl = dto.authorPhotoUrl,
-                                favoritedAt = dto.favoritedAt
-                            )
-                        }
+                    ?.map { doc ->
+                        FavoriteAuthor(
+                            uid = doc.id,
+                            favoritedAt = doc
+                                .getTimestamp(FIELD_FAVORITED_AT, ServerTimestampBehavior.ESTIMATE)
+                                ?.toDate()
+                                ?.time
+                                ?: 0L
+                        )
                     }
                     .orEmpty()
                 trySend(ObserveFavoriteAuthorsResult.Success(authors))
