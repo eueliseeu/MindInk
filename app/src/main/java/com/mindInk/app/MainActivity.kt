@@ -21,6 +21,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalResources
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.mindInk.app.ui.articles.ArticlesScreen
+import com.mindInk.app.ui.articles.community.CommunityArticlesScreen
 import com.mindInk.app.ui.articles.detail.ArticleDetailScreen
 import com.mindInk.app.ui.articles.editor.CreateEditArticleScreen
 import com.mindInk.app.ui.articles.stars.LocalStarredArticleIds
@@ -64,6 +65,7 @@ class MainActivity : ComponentActivity() {
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showLogin by rememberSaveable { mutableStateOf(false) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
+                var showCommunityArticles by rememberSaveable { mutableStateOf(false) }
                 var showAccountSettings by rememberSaveable { mutableStateOf(false) }
                 var profileNameOverride by rememberSaveable { mutableStateOf<String?>(null) }
                 var profileNameOverrideUid by rememberSaveable { mutableStateOf<String?>(null) }
@@ -78,6 +80,7 @@ class MainActivity : ComponentActivity() {
                         selectedArticleId != null ||
                             selectedAuthorUid != null ||
                             showCreateArticle ||
+                            showCommunityArticles ||
                             showAccountSettings
                     else ->
                         showLogin ||
@@ -90,6 +93,7 @@ class MainActivity : ComponentActivity() {
                         selectedArticleId != null -> selectedArticleId = null
                         selectedAuthorUid != null -> selectedAuthorUid = null
                         showCreateArticle -> showCreateArticle = false
+                        showCommunityArticles -> showCommunityArticles = false
                         showAccountSettings -> showAccountSettings = false
                         showLogin -> showLogin = false
                     }
@@ -127,6 +131,7 @@ class MainActivity : ComponentActivity() {
                                     val openMyProfile: () -> Unit = {
                                         selectedArticleId = null
                                         showCreateArticle = false
+                                        showCommunityArticles = false
                                         showAccountSettings = false
                                         selectedAuthorUid = current.user.uid
                                     }
@@ -134,6 +139,7 @@ class MainActivity : ComponentActivity() {
                                         selectedArticleId = null
                                         selectedAuthorUid = null
                                         showCreateArticle = false
+                                        showCommunityArticles = false
                                         showAccountSettings = true
                                     }
 
@@ -143,10 +149,18 @@ class MainActivity : ComponentActivity() {
                                                 user = currentUser,
                                                 onBack = { showAccountSettings = false },
                                                 onSignOut = viewModel::onSignOutClick,
-                                                onAccountDeleted = { showAccountSettings = false },
-                                                onProfileUpdated = {
-                                                    profileNameOverride = it
-                                                    profileNameOverrideUid = current.user.uid
+                                                onAccountDeleted = {
+                                                    showAccountSettings = false
+                                                    selectedArticleId = null
+                                                    selectedAuthorUid = null
+                                                    showCreateArticle = false
+                                                    showCommunityArticles = false
+                                                    profileNameOverride = null
+                                                    profileNameOverrideUid = null
+                                                },
+                                                onProfileUpdated = { newName ->
+                                                    profileNameOverride = newName
+                                                    profileNameOverrideUid = currentUser.uid
                                                 }
                                             )
                                         }
@@ -195,13 +209,28 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
 
+                                        showCommunityArticles -> {
+                                            CommunityArticlesScreen(
+                                                user = currentUser,
+                                                onBack = { showCommunityArticles = false },
+                                                onSignOut = viewModel::onSignOutClick,
+                                                onProfileClick = openMyProfile,
+                                                onSettingsClick = openAccountSettings,
+                                                onArticleClick = { card ->
+                                                    selectedArticleId = card.id
+                                                }
+                                            )
+                                        }
+
                                         else -> {
                                             ArticlesScreen(
                                                 user = currentUser,
                                                 onSignOut = viewModel::onSignOutClick,
                                                 onProfileClick = openMyProfile,
                                                 onSettingsClick = openAccountSettings,
-                                                onAddArticleClick = { showCreateArticle = true },
+                                                onAddArticleClick = {
+                                                    showCommunityArticles = true
+                                                },
                                                 onArticleClick = { card ->
                                                     selectedArticleId = card.id
                                                 },
@@ -215,6 +244,7 @@ class MainActivity : ComponentActivity() {
 
                                 else -> {
                                     showCreateArticle = false
+                                    showCommunityArticles = false
                                     showAccountSettings = false
 
                                     when {
