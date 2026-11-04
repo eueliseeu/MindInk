@@ -24,6 +24,7 @@ import com.mindInk.app.domain.usecase.favorite.ObserveFavoriteAuthorsUseCase
 import com.mindInk.app.domain.usecase.reading.ObserveContinueReadingUseCase
 import com.mindInk.app.domain.usecase.reading.UpsertReadingProgressUseCase
 import com.mindInk.app.domain.usecase.star.ObserveReceivedStarsUseCase
+import com.mindInk.app.ui.articles.mapper.mergeRealtimeArticles
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import com.mindInk.app.ui.articles.model.AuthorUi
@@ -144,7 +145,7 @@ class ArticlesViewModel @Inject constructor(
                                 hasLoadedFirstPage = true
                                 all
                             } else {
-                                mergeRealtime(state.exploreArticles, all, windowFull)
+                                mergeRealtimeArticles(state.exploreArticles, all, windowFull)
                             }
                             exploreCursorId = explore.lastOrNull()?.id
 
@@ -380,29 +381,6 @@ class ArticlesViewModel @Inject constructor(
             }
         }
         return uids.mapNotNull { profileCache[it] }.associateBy { it.uid }
-    }
-
-    private fun mergeRealtime(
-        current: List<ArticleCardUi>,
-        observed: List<ArticleCardUi>,
-        windowFull: Boolean
-    ): List<ArticleCardUi> {
-        val observedMap = observed.associateBy { it.id }
-        val oldestObserved = observed.minOfOrNull { it.createdAt }
-        val currentIds = current.map { it.id }.toHashSet()
-
-        val kept = current.filter { card ->
-            when {
-                card.id in observedMap -> true
-                !windowFull -> false
-                oldestObserved == null -> true
-                else -> card.createdAt < oldestObserved
-            }
-        }
-        val updated = kept.map { card -> observedMap[card.id] ?: card }
-        val brandNew = observed.filter { it.id !in currentIds }
-
-        return (brandNew + updated).sortedByDescending { it.createdAt }
     }
 
     private fun appendUnique(

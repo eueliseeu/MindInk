@@ -1,5 +1,8 @@
+
 package com.mindInk.app.ui.articles.detail
 
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
@@ -12,17 +15,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
-import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -35,12 +38,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.font.FontWeight
@@ -64,7 +69,7 @@ import com.mindInk.app.ui.theme.MindInkStar
 import com.mindInk.app.ui.theme.MindInkWhite
 import kotlinx.coroutines.delay
 
-private val ContentHorizontalPadding = 20.dp
+private val ContentHorizontalPadding = 18.dp
 
 @Composable
 fun ArticleDetailScreen(
@@ -82,10 +87,25 @@ fun ArticleDetailScreen(
     val article = state.article
     val context = LocalContext.current
     var isSpeaking by remember { mutableStateOf(false) }
+
     val tts = remember {
-        ArticleTextToSpeech(context) { speaking -> isSpeaking = speaking }
+        ArticleTextToSpeech(context) { speaking ->
+            isSpeaking = speaking
+        }
     }
+
     val scrollState = rememberScrollState()
+
+    val readingProgress by remember {
+        derivedStateOf {
+            if (scrollState.maxValue <= 0) {
+                0f
+            } else {
+                (scrollState.value.toFloat() / scrollState.maxValue)
+                    .coerceIn(0f, 1f)
+            }
+        }
+    }
 
     DisposableEffect(Unit) {
         onDispose { tts.shutdown() }
@@ -100,21 +120,23 @@ fun ArticleDetailScreen(
         viewModel.setArticleId(articleId)
     }
 
-    LaunchedEffect(scrollState.value, scrollState.maxValue) {
-        if (scrollState.maxValue > 0) {
-            val progress = scrollState.value.toFloat() / scrollState.maxValue.toFloat()
-            viewModel.onScrollProgress(progress)
-        }
+    LaunchedEffect(readingProgress) {
+        viewModel.onScrollProgress(readingProgress)
     }
 
     val lifecycleOwner = LocalLifecycleOwner.current
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_RESUME) viewModel.load()
             if (event == Lifecycle.Event.ON_PAUSE) tts.stop()
         }
+
         lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     LaunchedEffect(state.toastMessage) {
@@ -168,153 +190,181 @@ fun ArticleDetailScreen(
                             .weight(1f)
                             .fillMaxWidth()
                             .verticalScroll(scrollState)
-                            .padding(horizontal = ContentHorizontalPadding)
                             .padding(bottom = 24.dp)
                     ) {
-                        Text(
-                            text = "Escritor: ${formatAuthorName(article.authorName)}",
-                            color = MindInkMuted,
-                            fontSize = 13.sp
-                        )
-
                         Spacer(modifier = Modifier.height(12.dp))
 
-                        Text(
-                            text = article.title,
-                            color = MindInkWhite,
-                            fontSize = 24.sp,
-                            fontWeight = FontWeight.Bold,
-                            lineHeight = 30.sp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        if (article.subtitle.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(8.dp))
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = ContentHorizontalPadding)
+                                .background(
+                                    color = MaterialTheme.colorScheme.surface,
+                                    shape = RoundedCornerShape(16.dp)
+                                )
+                                .padding(18.dp)
+                        ) {
                             Text(
-                                text = article.subtitle,
+                                text = "Escritor: ${formatAuthorName(article.authorName)}",
                                 color = MindInkMuted,
-                                fontSize = 15.sp,
-                                lineHeight = 20.sp,
-                                modifier = Modifier.fillMaxWidth()
-                            )
-                        }
-
-                        if (article.category.isNotBlank()) {
-                            Spacer(modifier = Modifier.height(10.dp))
-                            Text(
-                                text = article.category,
-                                color = MindInkDim,
                                 fontSize = 13.sp
                             )
+
+                            Spacer(modifier = Modifier.height(12.dp))
+
+                            Text(
+                                text = article.title,
+                                color = MindInkWhite,
+                                fontSize = 24.sp,
+                                fontWeight = FontWeight.Bold,
+                                lineHeight = 30.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            if (article.subtitle.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                Text(
+                                    text = article.subtitle,
+                                    color = MindInkMuted,
+                                    fontSize = 15.sp,
+                                    lineHeight = 20.sp,
+                                    modifier = Modifier.fillMaxWidth()
+                                )
+                            }
+
+                            if (article.category.isNotBlank()) {
+                                Spacer(modifier = Modifier.height(10.dp))
+
+                                Text(
+                                    text = article.category,
+                                    color = MindInkDim,
+                                    fontSize = 13.sp
+                                )
+                            }
                         }
 
                         Spacer(modifier = Modifier.height(20.dp))
 
-                        Markdown(
-                            content = state.content,
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .combinedClickable(
-                                    interactionSource = remember(article.id) {
-                                        MutableInteractionSource()
-                                    },
-                                    indication = null,
-                                    onClick = {},
-                                    onDoubleClick = viewModel::onToggleStar
-                                )
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
+                                .padding(horizontal = ContentHorizontalPadding)
+                                .padding(horizontal = 18.dp)
                         ) {
-                            Row(
+                            Markdown(
+                                content = state.content,
                                 modifier = Modifier
-                                    .heightIn(min = 48.dp)
-                                    .clickable(
-                                        interactionSource = remember {
+                                    .fillMaxWidth()
+                                    .combinedClickable(
+                                        interactionSource = remember(article.id) {
                                             MutableInteractionSource()
                                         },
                                         indication = null,
-                                        role = Role.Button
-                                    ) {
-                                        if (isSpeaking) {
-                                            tts.stop()
-                                        } else {
-                                            tts.speak(
-                                                markdownToSpeechText(
-                                                    title = article.title,
-                                                    subtitle = article.subtitle,
-                                                    content = state.content
-                                                )
-                                            )
-                                        }
-                                    }
-                                    .padding(horizontal = 4.dp),
+                                        onClick = {},
+                                        onDoubleClick = viewModel::onToggleStar
+                                    )
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Icon(
-                                    imageVector = if (isSpeaking) {
-                                        Icons.Rounded.Stop
-                                    } else {
-                                        Icons.Rounded.VolumeUp
-                                    },
-                                    contentDescription = null,
-                                    tint = MindInkWhite,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(6.dp))
                                 Row(
                                     modifier = Modifier
-                                        .heightIn(min = 48.dp)
+                                        .height(48.dp)
                                         .clickable(
-                                            interactionSource = remember { MutableInteractionSource() },
+                                            interactionSource = remember {
+                                                MutableInteractionSource()
+                                            },
                                             indication = null,
-                                            role = Role.Button,
-                                            onClick = onCommentsClick
-                                        )
-                                        .padding(horizontal = 8.dp),
+                                            role = Role.Button
+                                        ) {
+                                            if (isSpeaking) {
+                                                tts.stop()
+                                            } else {
+                                                tts.speak(
+                                                    markdownToSpeechText(
+                                                        title = article.title,
+                                                        subtitle = article.subtitle,
+                                                        content = state.content
+                                                    )
+                                                )
+                                            }
+                                        }
+                                        .padding(horizontal = 4.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Rounded.ChatBubbleOutline,
-                                        contentDescription = "Comentários",
+                                        imageVector = if (isSpeaking) {
+                                            Icons.Rounded.Stop
+                                        } else {
+                                            Icons.Rounded.VolumeUp
+                                        },
+                                        contentDescription = null,
                                         tint = MindInkWhite,
                                         modifier = Modifier.size(18.dp)
                                     )
+
+                                    Spacer(modifier = Modifier.width(6.dp))
+
+                                    Row(
+                                        modifier = Modifier
+                                            .height(48.dp)
+                                            .clickable(
+                                                interactionSource = remember {
+                                                    MutableInteractionSource()
+                                                },
+                                                indication = null,
+                                                role = Role.Button,
+                                                onClick = onCommentsClick
+                                            )
+                                            .padding(horizontal = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.ChatBubbleOutline,
+                                            contentDescription = "Comentários",
+                                            tint = MindInkWhite,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
                                 }
 
-                            }
+                                IconButton(
+                                    onClick = viewModel::onToggleStar,
+                                    modifier = Modifier.height(48.dp)
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            imageVector = if (state.isStarredByMe) {
+                                                Icons.Rounded.Star
+                                            } else {
+                                                Icons.Outlined.Star
+                                            },
+                                            contentDescription = "Curtir artigo",
+                                            tint = if (state.isStarredByMe) {
+                                                MindInkStar
+                                            } else {
+                                                MindInkWhite
+                                            },
+                                            modifier = Modifier.size(20.dp)
+                                        )
 
-                            IconButton(
-                                onClick = viewModel::onToggleStar,
-                                modifier = Modifier.heightIn(min = 48.dp)
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(
-                                        imageVector = if (state.isStarredByMe) {
-                                            Icons.Rounded.Star
-                                        } else {
-                                            Icons.Outlined.Star
-                                        },
-                                        contentDescription = "Curtir artigo",
-                                        tint = if (state.isStarredByMe) {
-                                            MindInkStar
-                                        } else {
-                                            MindInkWhite
-                                        },
-                                        modifier = Modifier.size(20.dp)
-                                    )
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text(
-                                        text = article.starCount.toString(),
-                                        color = MindInkWhite,
-                                        fontSize = 13.sp,
-                                        fontWeight = FontWeight.Medium
-                                    )
+                                        Spacer(modifier = Modifier.width(4.dp))
+
+                                        Text(
+                                            text = article.starCount.toString(),
+                                            color = MindInkWhite,
+                                            fontSize = 13.sp,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -323,9 +373,60 @@ fun ArticleDetailScreen(
             }
         }
 
+        if (article != null && !state.isLoading) {
+            ReadingProgressDots(
+                progress = readingProgress,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .padding(end = 7.dp)
+            )
+        }
+
         ToastHost(
             message = state.toastMessage?.let { ToastMessage(it) },
             onDismiss = viewModel::clearToast
         )
+    }
+}
+
+@Composable
+private fun ReadingProgressDots(
+    progress: Float,
+    modifier: Modifier = Modifier
+) {
+    val activeColor = MaterialTheme.colorScheme.onBackground
+    val inactiveColor = MaterialTheme.colorScheme.onSurfaceVariant
+
+    Column(
+        modifier = modifier,
+        verticalArrangement = Arrangement.spacedBy(7.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        repeat(5) { index ->
+            val isActive = progress >= (index + 1) / 5f
+
+            val color by animateColorAsState(
+                targetValue = if (isActive) activeColor else inactiveColor,
+                label = "readingDotColor"
+            )
+
+            val scale by animateFloatAsState(
+                targetValue = if (isActive) 1f else 0.8f,
+                label = "readingDotScale"
+            )
+
+            Box(
+                modifier = Modifier
+                    .size(7.dp)
+                    .graphicsLayer {
+                        scaleX = scale
+                        scaleY = scale
+                    }
+                    .background(
+                        color = color,
+                        shape = CircleShape
+                    )
+            )
+        }
     }
 }

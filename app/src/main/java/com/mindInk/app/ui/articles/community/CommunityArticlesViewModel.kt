@@ -6,6 +6,7 @@ import com.mindInk.app.domain.repository.LoadArticlesPageResult
 import com.mindInk.app.domain.repository.ObserveArticlesResult
 import com.mindInk.app.domain.usecase.article.LoadArticlesPageUseCase
 import com.mindInk.app.domain.usecase.article.ObserveArticlesUseCase
+import com.mindInk.app.ui.articles.mapper.mergeRealtimeArticles
 import com.mindInk.app.ui.articles.mapper.toCardUi
 import com.mindInk.app.ui.articles.model.ArticleCardUi
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -35,7 +36,7 @@ class CommunityArticlesViewModel @Inject constructor(
 
     init {
         refresh(clearList = true)
-        observeRealtimeCounts()
+        observeRealtimeArticles()
     }
 
     fun onCategorySelected(category: String?) {
@@ -155,26 +156,26 @@ class CommunityArticlesViewModel @Inject constructor(
         }
     }
 
-    private fun observeRealtimeCounts() {
+    private fun observeRealtimeArticles() {
         viewModelScope.launch {
             observeArticles(REALTIME_LIMIT).collect { result ->
                 if (result !is ObserveArticlesResult.Success) return@collect
-                val live = result.articles.associateBy { it.id }
-                if (live.isEmpty()) return@collect
+                if (_uiState.value.isLoading) return@collect
+
+                val observed = result.articles.map { it.toCardUi() }
+                val windowFull = observed.size >= REALTIME_LIMIT.toInt()
+
                 _uiState.update { state ->
-                    val updated = state.articles.map { card ->
-                        val article = live[card.id] ?: return@map card
-                        card.copy(
-                            starCount = article.starCount,
-                            viewCount = article.viewCount,
-                            title = article.title,
-                            summary = article.subtitle.ifBlank { card.summary },
-                            authorName = article.authorName.ifBlank { card.authorName },
-                            authorPhotoUrl = article.authorPhotoUrl ?: card.authorPhotoUrl
+                    state.copy(
+                        articles = mergeRealtimeArticles(
+                            current = state.articles,
+                            observed = observed,
+                            windowFull = windowFull,
+                            category = state.selectedCategory
                         )
-                    }
-                    state.copy(articles = updated)
+                    )
                 }
+                cursorId = _uiState.value.articles.lastOrNull()?.id
             }
         }
     }
