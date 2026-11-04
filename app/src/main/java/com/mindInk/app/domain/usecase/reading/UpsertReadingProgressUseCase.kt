@@ -10,24 +10,6 @@ class UpsertReadingProgressUseCase @Inject constructor(
     suspend operator fun invoke(
         uid: String,
         articleId: String,
-        title: String,
-        category: String,
-        summary: String,
-        authorName: String,
-        authorPhotoUrl: String?,
-        starCount: Int,
-        viewCount: Int,
         progress: Float
-    ): UpsertReadingResult = repository.upsertProgress(
-        uid = uid,
-        articleId = articleId,
-        title = title,
-        category = category,
-        summary = summary,
-        authorName = authorName,
-        authorPhotoUrl = authorPhotoUrl,
-        starCount = starCount,
-        viewCount = viewCount,
-        progress = progress
-    )
+    ): UpsertReadingResult = repository.upsertProgress(uid, articleId, progress)
 }
