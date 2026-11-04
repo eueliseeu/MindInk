@@ -207,7 +207,7 @@ fun ArticleDetailScreen(
                         Spacer(modifier = Modifier.height(20.dp))
 
                         Markdown(
-                            content = article.content,
+                            content = state.content,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .combinedClickable(
@@ -245,7 +245,7 @@ fun ArticleDetailScreen(
                                                 markdownToSpeechText(
                                                     title = article.title,
                                                     subtitle = article.subtitle,
-                                                    content = article.content
+                                                    content = state.content
                                                 )
                                             )
                                         }
@@ -264,11 +264,6 @@ fun ArticleDetailScreen(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(6.dp))
-                                Text(
-                                    text = if (isSpeaking) "Parar leitura" else "Ouvir artigo",
-                                    color = MindInkWhite,
-                                    fontSize = 13.sp
-                                )
                             }
 
                             IconButton(
