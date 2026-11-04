@@ -1,5 +1,7 @@
 package com.mindInk.app.data.article
 
+import com.google.firebase.Timestamp
+
 data class ArticleDto(
     val authorUid: String = "",
     val authorName: String = "",
@@ -7,9 +9,9 @@ data class ArticleDto(
     val category: String = "",
     val title: String = "",
     val subtitle: String = "",
-    val content: String = "",
+    val excerpt: String = "",
     val starCount: Int = 0,
     val viewCount: Int = 0,
-    val createdAt: Long = 0L,
-    val updatedAt: Long = 0L
+    val createdAt: Timestamp? = null,
+    val updatedAt: Timestamp? = null
 )
