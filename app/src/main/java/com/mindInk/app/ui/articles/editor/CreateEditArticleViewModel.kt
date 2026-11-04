@@ -1,5 +1,6 @@
 package com.mindInk.app.ui.articles.editor
 
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.MAX_ARTICLE_CHARS
@@ -54,46 +55,47 @@ class CreateEditArticleViewModel @Inject constructor(
 
     fun onTitleChange(value: String) {
         if (value.length <= TITLE_MAX) {
-            _uiState.update { it.copy(title = value, errorMessage = null) }
+            _uiState.update { it.copy(title = value.replace('\n', ' '), errorMessage = null) }
         }
     }
 
     fun onSubtitleChange(value: String) {
         if (value.length <= SUBTITLE_MAX) {
-            _uiState.update { it.copy(subtitle = value, errorMessage = null) }
+            _uiState.update { it.copy(subtitle = value.replace('\n', ' '), errorMessage = null) }
         }
     }
 
-    fun onContentChange(value: String) {
-        if (exceedsLimit(value)) {
-            _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
-            return
-        }
-        _uiState.update { it.copy(content = value, errorMessage = null) }
-    }
-
-    fun togglePreview() {
-        _uiState.update { it.copy(isPreview = !it.isPreview) }
-    }
-
-    fun insertMarkdown(snippet: String) {
+    fun onContentChange(value: TextFieldValue) {
         val current = _uiState.value.content
-        val separator = if (current.isBlank() || current.endsWith("\n")) "" else "\n"
-        val next = current + separator + snippet
-        if (exceedsLimit(next)) {
-            _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
+        val sanitized = MarkdownFormatter.sanitize(value)
+
+        if (sanitized.text == current.text) {
+            _uiState.update { it.copy(content = sanitized) }
             return
         }
-        _uiState.update { it.copy(content = next, isPreview = false, errorMessage = null) }
+
+        updateContent(MarkdownFormatter.continueList(current, sanitized))
     }
 
-    fun applyBold() = insertMarkdown("**texto em negrito**")
-    fun applyItalic() = insertMarkdown("*texto em itálico*")
-    fun applyHeading() = insertMarkdown("\n## Título da seção\n")
-    fun applyBullet() = insertMarkdown("- item da lista\n")
-    fun applyLink() = insertMarkdown("[texto do link](https://)")
-    fun applyCode() = insertMarkdown("\n```\ncódigo\n```\n")
-    fun applyImage() = insertMarkdown("![descrição](https://url-da-imagem)")
+    fun onPreviewChange(enabled: Boolean) {
+        _uiState.update { it.copy(isPreview = enabled) }
+    }
+
+    fun applyBold() = format { MarkdownFormatter.wrap(it, "**", "**", "texto em negrito") }
+
+    fun applyItalic() = format { MarkdownFormatter.wrap(it, "_", "_", "texto em itálico") }
+
+    fun applyHeading() = format(MarkdownFormatter::heading)
+
+    fun applyBullet() = format(MarkdownFormatter::bullet)
+
+    fun applyNumbered() = format(MarkdownFormatter::numbered)
+
+    fun applyQuote() = format(MarkdownFormatter::quote)
+
+    fun applyLink() = format(MarkdownFormatter::link)
+
+    fun applyCode() = format(MarkdownFormatter::code)
 
     fun clearError() {
         _uiState.update { it.copy(errorMessage = null) }
@@ -118,11 +120,11 @@ class CreateEditArticleViewModel @Inject constructor(
             _uiState.update { it.copy(errorMessage = "Informe o título.") }
             return
         }
-        if (state.content.isBlank()) {
+        if (state.content.text.isBlank()) {
             _uiState.update { it.copy(errorMessage = "Escreva o conteúdo em Markdown.") }
             return
         }
-        if (exceedsLimit(state.content)) {
+        if (exceedsLimit(state.content.text)) {
             _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
             return
         }
@@ -141,7 +143,7 @@ class CreateEditArticleViewModel @Inject constructor(
                         category = state.category,
                         title = state.title,
                         subtitle = state.subtitle,
-                        content = state.content
+                        content = state.content.text
                     )
                 ) {
                     is UpdateArticleResult.Success -> {
@@ -164,7 +166,7 @@ class CreateEditArticleViewModel @Inject constructor(
                         category = state.category,
                         title = state.title,
                         subtitle = state.subtitle,
-                        content = state.content
+                        content = state.content.text
                     )
                 ) {
                     is CreateArticleResult.Success -> {
@@ -182,6 +184,18 @@ class CreateEditArticleViewModel @Inject constructor(
                 }
             }
         }
+    }
+
+    private fun format(transform: (TextFieldValue) -> TextFieldValue) {
+        updateContent(transform(_uiState.value.content))
+    }
+
+    private fun updateContent(next: TextFieldValue) {
+        if (exceedsLimit(next.text)) {
+            _uiState.update { it.copy(errorMessage = LIMIT_MESSAGE) }
+            return
+        }
+        _uiState.update { it.copy(content = next, errorMessage = null) }
     }
 
     private fun exceedsLimit(text: String): Boolean =
