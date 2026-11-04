@@ -58,7 +58,7 @@ private val TopBarTopPadding = 24.dp
 private val TopBarBottomPadding = 12.dp
 private val MenuGap = 8.dp
 
-private const val EVENT_AVATAR_BORDER_ENABLED = true
+private const val EVENT_AVATAR_BORDER_ENABLED = false
 
 @Composable
 fun MindInkTopBar(

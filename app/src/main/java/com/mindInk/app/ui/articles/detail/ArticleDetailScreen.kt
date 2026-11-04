@@ -128,12 +128,8 @@ fun ArticleDetailScreen(
     ) {
         Column(modifier = Modifier.fillMaxSize()) {
             MindInkTopBar(
-                screenTitle = "/ Lendo o Art.",
+                screenTitle = "Lendo o Art.",
                 user = user,
-                onBack = {
-                    tts.stop()
-                    onBack()
-                },
                 showSearch = false,
                 showUserMenu = true,
                 onSignOut = onSignOut,

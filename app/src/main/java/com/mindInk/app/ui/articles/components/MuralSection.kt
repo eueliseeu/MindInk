@@ -34,7 +34,7 @@ fun MuralSection(
             .padding(horizontal = 20.dp)
     ) {
         Text(
-            text = "Mural",
+            text = "Sua vida na Comunidade MindInk.",
             color = MindInkWhite,
             fontSize = 18.sp,
             fontWeight = FontWeight.SemiBold
@@ -43,7 +43,7 @@ fun MuralSection(
         Spacer(modifier = Modifier.height(4.dp))
 
         Text(
-            text = "Estrelas nos seus artigos e novidades dos autores que você curte.",
+            text = "Status dos seus artigos.",
             color = MindInkMuted,
             fontSize = 13.sp,
             lineHeight = 18.sp
@@ -59,15 +59,15 @@ fun MuralSection(
             )
         } else {
             items.forEach { item ->
+                val firstName = item.actorName.trim().split(" ").firstOrNull() ?: item.actorName
+
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clickable {
                             when (item) {
-                                is MuralItemUi.NewArticleFromFavorite ->
-                                    onNewArticleClick(item)
-                                is MuralItemUi.StarReceived ->
-                                    onStarReceivedClick(item)
+                                is MuralItemUi.NewArticleFromFavorite -> onNewArticleClick(item)
+                                is MuralItemUi.StarReceived -> onStarReceivedClick(item)
                             }
                         }
                         .padding(vertical = 8.dp),
@@ -84,10 +84,8 @@ fun MuralSection(
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
                             text = when (item) {
-                                is MuralItemUi.StarReceived ->
-                                    "${item.actorName} deixou uma estrela no seu artigo"
-                                is MuralItemUi.NewArticleFromFavorite ->
-                                    "${item.actorName} publicou um novo artigo"
+                                is MuralItemUi.StarReceived -> "$firstName deixou uma estrela no seu artigo"
+                                is MuralItemUi.NewArticleFromFavorite -> "$firstName publicou um novo artigo"
                             },
                             color = MindInkWhite,
                             fontSize = 14.sp,
