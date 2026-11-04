@@ -1,5 +1,6 @@
 package com.mindInk.app.ui.profile
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.mindInk.app.core.formatAuthorName
@@ -16,6 +17,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+
+private const val TAG = "AuthorProfileVM"
+private const val LOAD_ERROR_MESSAGE = "Não foi possível carregar os artigos deste autor."
 
 @HiltViewModel
 class AuthorProfileViewModel @Inject constructor(
@@ -87,8 +91,9 @@ class AuthorProfileViewModel @Inject constructor(
                         }
                     }
                     is ObserveArticlesResult.Error -> {
+                        Log.e(TAG, "Falha ao carregar artigos do autor $authorUid: ${result.message}")
                         _uiState.update {
-                            it.copy(isLoading = false, errorMessage = result.message)
+                            it.copy(isLoading = false, errorMessage = LOAD_ERROR_MESSAGE)
                         }
                     }
                 }
