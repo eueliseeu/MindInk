@@ -26,6 +26,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.Stop
 import androidx.compose.material.icons.rounded.VolumeUp
@@ -61,6 +62,7 @@ import com.mindInk.app.core.formatAuthorName
 import com.mindInk.app.core.markdownToSpeechText
 import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.ui.components.MindInkTopBar
+import com.mindInk.app.ui.components.UserAvatar
 import com.mindInk.app.ui.components.ToastHost
 import com.mindInk.app.ui.components.ToastMessage
 import com.mindInk.app.ui.theme.MindInkDim
@@ -81,6 +83,7 @@ fun ArticleDetailScreen(
     onSettingsClick: (() -> Unit)? = null,
     onCommentsClick: () -> Unit = {},
     onShareClick: () -> Unit = {},
+    onEditClick: (() -> Unit)? = null,
     viewModel: ArticleDetailViewModel = hiltViewModel()
 ) {
     val state by viewModel.uiState.collectAsState()
@@ -204,11 +207,37 @@ fun ArticleDetailScreen(
                                 )
                                 .padding(18.dp)
                         ) {
-                            Text(
-                                text = "Escritor: ${formatAuthorName(article.authorName)}",
-                                color = MindInkMuted,
-                                fontSize = 13.sp
-                            )
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                UserAvatar(
+                                    photoUrl = article.authorPhotoUrl,
+                                    name = article.authorName,
+                                    size = 36.dp
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Text(
+                                    text = formatAuthorName(article.authorName),
+                                    color = MindInkMuted,
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                if (onEditClick != null && article.authorUid == user.uid) {
+                                    IconButton(
+                                        onClick = onEditClick,
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Rounded.Edit,
+                                            contentDescription = "Editar artigo",
+                                            tint = MindInkMuted,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(12.dp))
 
