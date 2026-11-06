@@ -11,6 +11,8 @@ import com.mindInk.app.domain.model.AuthUser
 import com.mindInk.app.domain.repository.CreateArticleResult
 import com.mindInk.app.domain.repository.UpdateArticleResult
 import com.mindInk.app.domain.usecase.article.CreateArticleUseCase
+import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
+import com.mindInk.app.domain.usecase.article.GetArticleContentUseCase
 import com.mindInk.app.domain.usecase.article.UpdateArticleUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -27,7 +29,9 @@ private const val LIMIT_MESSAGE = "Limite de 10.000 palavras atingido."
 @HiltViewModel
 class CreateEditArticleViewModel @Inject constructor(
     private val createArticle: CreateArticleUseCase,
-    private val updateArticle: UpdateArticleUseCase
+    private val updateArticle: UpdateArticleUseCase,
+    private val getArticleById: GetArticleByIdUseCase,
+    private val getArticleContent: GetArticleContentUseCase
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CreateEditArticleUiState())
@@ -46,6 +50,60 @@ class CreateEditArticleViewModel @Inject constructor(
         boundUser = user
         _uiState.update {
             it.copy(authorLabel = formatAuthorName(user.displayName ?: user.email))
+        }
+    }
+
+    fun loadForEdit(user: AuthUser, articleId: String) {
+        boundUser = user
+        if (articleId.isBlank()) {
+            resetForNewArticle(user)
+            return
+        }
+        if (_uiState.value.isEditMode &&
+            _uiState.value.articleId == articleId &&
+            !_uiState.value.isLoading &&
+            _uiState.value.title.isNotBlank()
+        ) {
+            bindAuthor(user)
+            return
+        }
+        viewModelScope.launch {
+            _uiState.value = CreateEditArticleUiState(
+                articleId = articleId,
+                isEditMode = true,
+                isLoading = true,
+                authorLabel = formatAuthorName(user.displayName ?: user.email)
+            )
+            val article = getArticleById(articleId)
+            if (article == null) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Artigo não encontrado."
+                    )
+                }
+                return@launch
+            }
+            if (article.authorUid != user.uid) {
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = "Sem permissão para editar este artigo."
+                    )
+                }
+                return@launch
+            }
+            val body = getArticleContent(articleId).orEmpty()
+            _uiState.update {
+                it.copy(
+                    isLoading = false,
+                    category = article.category,
+                    title = article.title,
+                    subtitle = article.subtitle,
+                    content = TextFieldValue(body),
+                    errorMessage = null
+                )
+            }
         }
     }
 
