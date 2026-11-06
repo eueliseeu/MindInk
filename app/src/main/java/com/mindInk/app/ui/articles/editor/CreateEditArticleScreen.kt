@@ -37,6 +37,7 @@ import androidx.compose.material.icons.rounded.FormatQuote
 import androidx.compose.material.icons.rounded.Link
 import androidx.compose.material.icons.rounded.Title
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -91,8 +92,9 @@ import com.mindInk.app.ui.theme.MindInkWhite
 @Composable
 fun CreateEditArticleScreen(
     user: AuthUser,
+    articleId: String? = null,
     onBack: () -> Unit,
-    onSaved: () -> Unit,
+    onSaved: (isEdit: Boolean) -> Unit,
     onSignOut: () -> Unit = {},
     onProfileClick: (() -> Unit)? = null,
     onSettingsClick: (() -> Unit)? = null,
@@ -111,18 +113,19 @@ fun CreateEditArticleScreen(
         if (state.isPreview) normalizeMarkdown(state.content.text) else ""
     }
 
-    LaunchedEffect(user.uid) {
-        if (!state.isEditMode) {
+    LaunchedEffect(user.uid, articleId) {
+        if (articleId.isNullOrBlank()) {
             viewModel.resetForNewArticle(user)
         } else {
-            viewModel.bindAuthor(user)
+            viewModel.loadForEdit(user, articleId)
         }
     }
 
     LaunchedEffect(state.saved) {
         if (state.saved) {
+            val wasEdit = state.isEditMode
             viewModel.consumeSaved()
-            onSaved()
+            onSaved(wasEdit)
         }
     }
 
@@ -138,10 +141,22 @@ fun CreateEditArticleScreen(
             user = user,
             showSearch = false,
             showUserMenu = true,
+            onBack = onBack,
             onSignOut = onSignOut,
             onProfileClick = onProfileClick,
             onSettingsClick = onSettingsClick
         )
+
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxWidth(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator(color = MindInkWhite)
+            }
+        } else {
 
         Column(
             modifier = Modifier
@@ -405,7 +420,7 @@ fun CreateEditArticleScreen(
             ) {
                 Text(
                     text = when {
-                        state.isSaving -> "Publicando…"
+                        state.isSaving -> if (state.isEditMode) "Salvando…" else "Publicando…"
                         state.isEditMode -> "Salvar alterações"
                         else -> "Publicar artigo"
                     },
@@ -413,6 +428,7 @@ fun CreateEditArticleScreen(
                     fontSize = 15.sp
                 )
             }
+        }
         }
     }
 }

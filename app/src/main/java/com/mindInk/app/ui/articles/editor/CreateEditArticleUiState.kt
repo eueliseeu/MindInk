@@ -5,6 +5,7 @@ import androidx.compose.ui.text.input.TextFieldValue
 data class CreateEditArticleUiState(
     val articleId: String? = null,
     val isEditMode: Boolean = false,
+    val isLoading: Boolean = false,
     val authorLabel: String = "",
     val category: String = "",
     val title: String = "",

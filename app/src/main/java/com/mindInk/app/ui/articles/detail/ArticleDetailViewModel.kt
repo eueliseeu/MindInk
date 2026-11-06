@@ -7,7 +7,8 @@ import com.mindInk.app.data.reading.PendingReadingStore
 import com.mindInk.app.domain.repository.RecordArticleViewResult
 import com.mindInk.app.domain.repository.ToggleStarResult
 import com.mindInk.app.domain.usecase.article.GetArticleByIdUseCase
-import com.mindInk.app.domain.usecase.article.GetArticleContentUseCase
+import com.mindInk.app.domain.usecase.article.ObserveArticleContentUseCase
+import com.mindInk.app.domain.usecase.article.ObserveArticleUseCase
 import com.mindInk.app.domain.usecase.article.RecordArticleViewUseCase
 import com.mindInk.app.domain.usecase.article.ToggleStarUseCase
 import com.mindInk.app.domain.usecase.auth.ObserveAuthStateUseCase
@@ -16,8 +17,6 @@ import com.mindInk.app.domain.usecase.reading.UpsertReadingProgressUseCase
 import com.mindInk.app.domain.usecase.star.ObserveStarredArticleIdsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,7 +31,8 @@ private const val CONTENT_ERROR_MESSAGE = "Não foi possível carregar o conteú
 @HiltViewModel
 class ArticleDetailViewModel @Inject constructor(
     private val getArticleById: GetArticleByIdUseCase,
-    private val getArticleContent: GetArticleContentUseCase,
+    private val observeArticle: ObserveArticleUseCase,
+    private val observeArticleContent: ObserveArticleContentUseCase,
     private val toggleStarUseCase: ToggleStarUseCase,
     private val recordArticleView: RecordArticleViewUseCase,
     private val observeAuthState: ObserveAuthStateUseCase,
@@ -49,6 +49,8 @@ class ArticleDetailViewModel @Inject constructor(
     private var readingCompleted: Boolean = false
 
     private var starsJob: Job? = null
+    private var articleJob: Job? = null
+    private var contentJob: Job? = null
     private var starsUid: String? = null
     private var starredIds: Set<String> = emptySet()
     private var expectedStar: Boolean? = null
@@ -79,7 +81,7 @@ class ArticleDetailViewModel @Inject constructor(
     }
 
     fun setArticleId(id: String) {
-        if (articleId == id && _uiState.value.article != null) {
+        if (articleId == id && articleJob?.isActive == true) {
             tryRecordView()
             tryStartReading()
             return
@@ -90,46 +92,81 @@ class ArticleDetailViewModel @Inject constructor(
         readingCompleted = false
         expectedStar = null
         syncStarFlag()
-        load()
+        observeArticleRealtime()
     }
 
     fun load() {
+        observeArticleRealtime()
+    }
+
+    private fun observeArticleRealtime() {
         if (articleId.isBlank()) return
         val targetId = articleId
-        val alreadyLoaded = _uiState.value.article?.id == targetId
 
-        viewModelScope.launch {
-            if (!alreadyLoaded) {
-                _uiState.update { it.copy(isLoading = true, errorMessage = null, content = "") }
-            }
+        articleJob?.cancel()
+        contentJob?.cancel()
 
-            val needsContent = !alreadyLoaded || _uiState.value.content.isBlank()
-            val (article, content) = coroutineScope {
-                val articleDeferred = async { getArticleById(targetId) }
-                val contentDeferred = if (needsContent) async { getArticleContent(targetId) } else null
-                articleDeferred.await() to contentDeferred?.await()
-            }
-            if (articleId != targetId) return@launch
+        val sameArticle = _uiState.value.article?.id == targetId
+        _uiState.update {
+            it.copy(
+                isLoading = !sameArticle,
+                errorMessage = null,
+                content = if (sameArticle) it.content else "",
+                article = if (sameArticle) it.article else null
+            )
+        }
 
-            val current = _uiState.value
-            val resolvedArticle = article ?: current.article.takeIf { alreadyLoaded }
-            val resolvedContent = content ?: current.content
-            val message = when {
-                resolvedArticle == null -> NOT_FOUND_MESSAGE
-                resolvedContent.isBlank() -> CONTENT_ERROR_MESSAGE
-                else -> null
+        articleJob = viewModelScope.launch {
+            observeArticle(targetId).collect { article ->
+                if (articleId != targetId) return@collect
+                if (article == null) {
+                    _uiState.update {
+                        it.copy(
+                            isLoading = false,
+                            article = null,
+                            errorMessage = NOT_FOUND_MESSAGE
+                        )
+                    }
+                    return@collect
+                }
+                _uiState.update { state ->
+                    state.copy(
+                        isLoading = state.content.isBlank() && state.article?.id != targetId,
+                        article = article,
+                        errorMessage = when {
+                            state.content.isNotBlank() -> null
+                            state.errorMessage == CONTENT_ERROR_MESSAGE -> CONTENT_ERROR_MESSAGE
+                            else -> null
+                        }
+                    )
+                }
+                tryRecordView()
+                tryStartReading()
+                syncStarFlag()
             }
+        }
 
-            _uiState.update {
-                it.copy(
-                    isLoading = false,
-                    article = if (message == null) resolvedArticle else null,
-                    content = resolvedContent,
-                    errorMessage = message
-                )
+        contentJob = viewModelScope.launch {
+            observeArticleContent(targetId).collect { content ->
+                if (articleId != targetId) return@collect
+                val text = content.orEmpty()
+                _uiState.update { state ->
+                    val article = state.article
+                    state.copy(
+                        content = text,
+                        isLoading = article == null,
+                        errorMessage = when {
+                            article == null -> state.errorMessage
+                            text.isBlank() -> CONTENT_ERROR_MESSAGE
+                            else -> null
+                        }
+                    )
+                }
+                if (text.isNotBlank()) {
+                    tryRecordView()
+                    tryStartReading()
+                }
             }
-            tryRecordView()
-            tryStartReading()
         }
     }
 
