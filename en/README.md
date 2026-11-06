@@ -18,9 +18,9 @@
 
 ## About
 
-**MindInk** is an Android app for publishing and reading technology articles: development, artificial intelligence, mobile devices, cloud, and related topics.
+**MindInk** is an Android app for publishing and reading technology articles: development, artificial intelligence, mobile, cloud, and related topics.
 
-Its highlights are social sign-in (Google and GitHub), public author profiles, Markdown article editing, and **read-aloud support** for accessibility.
+Highlights include social sign-in (Google and GitHub), public author profiles, Markdown authoring with live preview, a community feed with filters and infinite scroll, offline handling, and **read-aloud** support for accessibility.
 
 > **Academic project:** A3 for Usability, Web Development, Mobile, and Games.
 
@@ -29,9 +29,9 @@ Add app screenshots here. Example:
 
 ## Screenshots
 
-| Home | Article | Editor | Profile |
+| Home | Community | Article | Editor |
 | :---: | :---: | :---: | :---: |
-| ![Home](../docs/screenshots/home.png) | ![Article](../docs/screenshots/article.png) | ![Editor](../docs/screenshots/editor.png) | ![Profile](../docs/screenshots/profile.png) |
+| ![Home](../docs/screenshots/home.png) | ![Community](../docs/screenshots/community.png) | ![Article](../docs/screenshots/article.png) | ![Editor](../docs/screenshots/editor.png) |
 -->
 
 ## Table of contents
@@ -41,13 +41,17 @@ Add app screenshots here. Example:
   - [Table of contents](#table-of-contents)
   - [Features](#features)
     - [Account and authentication](#account-and-authentication)
-    - [Articles](#articles)
+    - [Home (signed-in)](#home-signed-in)
+    - [Community and articles](#community-and-articles)
+    - [Reading experience](#reading-experience)
     - [Authors](#authors)
+    - [Guest mode](#guest-mode)
     - [Accessibility](#accessibility)
   - [Technologies](#technologies)
   - [Getting started](#getting-started)
     - [Requirements](#requirements)
     - [Steps](#steps)
+    - [Firestore indexes](#firestore-indexes)
     - [Useful commands](#useful-commands)
   - [Architecture](#architecture)
     - [Dependency flow](#dependency-flow)
@@ -55,7 +59,9 @@ Add app screenshots here. Example:
     - [Author name update flow](#author-name-update-flow)
   - [Data model (Firestore)](#data-model-firestore)
     - [`articles/{articleId}`](#articlesarticleid)
+    - [`articles/{articleId}/content/body`](#articlesarticleidcontentbody)
     - [`user_profiles/{uid}`](#user_profilesuid)
+    - [Other collections](#other-collections)
   - [Security and known limitations](#security-and-known-limitations)
     - [Firestore rules](#firestore-rules)
     - [To address before production](#to-address-before-production)
@@ -70,26 +76,45 @@ Add app screenshots here. Example:
 ### Account and authentication
 
 - **Social sign-in** with Google or GitHub through Firebase Authentication.
-- **Account linking:** when providers conflict, the app offers a flow to link both accounts.
-- **Settings:** edit name and social links (GitHub and LinkedIn). The email comes from the authentication provider and is read-only.
-- **Account deletion** with confirmation and handling of the recent-authentication requirement.
-- **Avatar menu** with separate access to profile, settings, and sign-out.
+- **Account linking** when providers conflict.
+- **Settings:** edit name and social links (GitHub, LinkedIn). Email is read-only from the auth provider.
+- **Account deletion** with confirmation and recent-login handling.
+- **Avatar menu** for profile, settings, and sign-out (optional event border on the top-bar avatar).
 
-### Articles
+### Home (signed-in)
 
-- **Creation and editing** with title, subtitle, category, Markdown content, and preview.
-- **Reading** with Markdown rendering.
-- **Home screen** with recent articles, authors, and a paginated list for exploring more content.
-- **Star ratings:** the interface highlights the star for users who already rated an article; the count and the list of users are updated in Firestore.
+- Greeting and navigation into the community feed.
+- **Mural:** stars received on your articles and new posts from authors you starred (max items, open profile or article as appropriate).
+- **Continue reading:** articles opened but not scrolled to the end (Firestore for signed-in users; guest pending items can sync on login).
+- Favorite authors derived from stars you gave.
+
+### Community and articles
+
+- **Community screen:** category filter (**Comunidade** = all, or Tech / IA / Mobile / Cloud / DevOps) queried on the server, local search on loaded pages, infinite scroll, scroll-to-top control, and create FAB.
+- **Create and edit** on the same screen (title, subtitle, category, Markdown body, preview). Only the **author** can edit; a discrete pencil appears next to the author avatar on the detail screen.
+- **Explore cards** with category, stars, and views.
+
+### Reading experience
+
+- Markdown rendering on the article detail screen.
+- **Real-time updates:** while a detail screen is open, Firestore listeners refresh metadata and body so an author’s save is visible to all readers without reopening the article.
+- Stars and unique view counting (subcollection-backed).
+- Offline gate: when connectivity is lost, the app shows an offline screen until the connection is restored.
 
 ### Authors
 
-- **Public profile** with published articles, total stars, and optional links.
-- **Name synchronization:** when a new name is saved, the app updates the Firebase profile and the `authorName` field across all of the author's articles, in paginated batches.
+- **Public profile** (band header, verified badge, social links, article list, aggregate views/stars).
+- Own profile shows a `(me)` marker.
+- **Name sync:** saving a new name updates Firebase Auth and `authorName` on the author’s articles in paginated batches.
+
+### Guest mode
+
+- Browse home, open articles (preview limits where applied), and open author profiles.
+- Sign-in prompts for actions that require an account.
 
 ### Accessibility
 
-- **Read aloud** (Android TextToSpeech) of the title, subtitle, and content in Portuguese, with Markdown syntax stripped and a control to start or stop.
+- **Read aloud** (Android TextToSpeech) for title, subtitle, and content in Portuguese, with Markdown stripped and start/stop control.
 
 ---
 
@@ -98,17 +123,17 @@ Add app screenshots here. Example:
 | Category | Technology |
 | --- | --- |
 | Language | Kotlin |
-| UI | Jetpack Compose, Material 3, and Compose BOM |
-| Architecture | MVVM, separated into `ui`, `domain`, `data`, and `core` |
-| Dependency injection | Hilt and KSP |
-| Authentication | Firebase Authentication, Credential Manager, Google and GitHub providers |
+| UI | Jetpack Compose, Material 3, Compose BOM |
+| Architecture | MVVM with `ui`, `domain`, `data`, and `core` |
+| DI | Hilt and KSP |
+| Auth | Firebase Authentication, Credential Manager, Google and GitHub |
 | Database | Cloud Firestore |
 | Images | Coil 3 |
 | Markdown | multiplatform-markdown-renderer |
 | Voice | Android TextToSpeech |
 | Testing | JUnit 4 |
 
-> The exact versions of SDKs, plugins, and libraries are in `app/build.gradle.kts` and `gradle/libs.versions.toml`.
+> Exact SDK and library versions live in `app/build.gradle.kts` and `gradle/libs.versions.toml`.
 
 ---
 
@@ -116,29 +141,38 @@ Add app screenshots here. Example:
 
 ### Requirements
 
-- Android Studio compatible with the project's Android Gradle Plugin
-- JDK 21 for the Gradle daemon (defined in `gradle/gradle-daemon-jvm.properties`)
-- A device or emulator running Android **API 24 or higher**
+- Android Studio compatible with the project’s Android Gradle Plugin
+- JDK 21 for the Gradle daemon (`gradle/gradle-daemon-jvm.properties`)
+- Device or emulator on Android **API 24+**
 - A project in the [Firebase Console](https://console.firebase.google.com/)
 
-> Java/Kotlin code is configured with Java 11 compatibility. The project compiles against API 37 and sets `targetSdk` to 35.
+> Java/Kotlin compatibility is set to 11. The app compiles against API 37 with `targetSdk` 35.
 
 ### Steps
 
-1. **Clone the repository** and open it in Android Studio.
-2. **Add `google-services.json`** to the `app/` folder (the file is ignored by Git).
-3. **Enable the providers** Google and GitHub in Firebase Authentication and configure the OAuth credentials for each one.
-4. **Register the SHA-1** of your debug keystore in the Firebase project.
-5. **Set up Cloud Firestore** and publish the reference rules from [`docs/firestore.rules.txt`](../docs/firestore.rules.txt) through the Firebase Console. Gradle does not apply them automatically.
-6. **Sync Gradle** and run the app on a device or emulator.
+1. **Clone** the repository and open it in Android Studio.
+2. **Add `google-services.json`** under `app/` (Git-ignored).
+3. **Enable** Google and GitHub providers in Firebase Authentication and configure OAuth.
+4. **Register the debug SHA-1** in the Firebase project.
+5. **Create Cloud Firestore** and publish rules from [`docs/firestore.rules.txt`](../docs/firestore.rules.txt) (Gradle does not deploy rules).
+6. **Create composite indexes** required by community filters (see below).
+7. **Sync Gradle** and run on a device or emulator.
+
+### Firestore indexes
+
+Community category filtering uses:
+
+```text
+Collection: articles
+Fields: category Ascending, createdAt Descending
+```
+
+If the console shows a link in a `FAILED_PRECONDITION` error, open it and create the index. Queries that only filter by `authorUid` may also need `authorUid` + `createdAt` depending on how they are written.
 
 ### Useful commands
 
 ```bash
-# Build the debug APK
 ./gradlew :app:assembleDebug
-
-# Run unit tests
 ./gradlew :app:testDebugUnitTest
 ```
 
@@ -146,13 +180,13 @@ Add app screenshots here. Example:
 
 ## Architecture
 
-The app is a single Android module (`:app`) following **MVVM** with a simplified Clean Architecture.
+Single Android module (`:app`) using **MVVM** and a simplified Clean Architecture.
 
-- `MainActivity` controls the main destinations using saved Compose state and navigation callbacks.
-- Screens observe their ViewModels through `StateFlow`.
-- Firestore listeners are exposed as `Flow` (via `callbackFlow`) and keep articles, ratings, and profiles updated in real time.
-- One-off operations use coroutines and await Firebase's asynchronous tasks.
-- The `data` layer does not depend on presentation models.
+- `MainActivity` owns top-level destinations with `rememberSaveable` flags and callbacks.
+- Screens collect ViewModel `StateFlow`s.
+- Firestore listeners are exposed as `Flow` (`callbackFlow`) for lists, detail metadata/content, stars, and reading progress.
+- One-off writes use coroutines and Firebase Tasks.
+- The `data` layer does not depend on UI models.
 
 ### Dependency flow
 
@@ -167,32 +201,34 @@ Compose Screen -> ViewModel -> UseCase -> Repository (interface)
 
 | Package | Responsibility |
 | --- | --- |
-| `core/` | Name formatting, Markdown preparation for speech, and TextToSpeech support |
-| `domain/model/` | Models independent from Firebase APIs and the UI |
-| `domain/repository/` | Persistence and authentication contracts, with typed results |
-| `domain/usecase/` | Application operations for articles, authentication, and settings |
-| `data/article/` | DTOs, Firestore ↔ domain conversion, and the article repository |
-| `data/auth/` | Firebase Authentication, Google Credential Manager, and GitHub OAuth |
-| `data/settings/` | DTO and persistence of settings in `user_profiles` |
-| `ui/articles/` | List, details, editor, components, and presentation models |
-| `ui/articles/mapper/` | Conversion of domain models into card models |
-| `ui/auth/` | Login, session state, and provider linking |
-| `ui/profile/` | Public author profile and social links |
-| `ui/settings/` | Screen, state, and ViewModel for account settings |
-| `ui/splash/` | Splash screen |
-| `ui/components/` and `ui/theme/` | Shared components and visual tokens |
-| `di/` | Hilt bindings and providers |
+| `core/` | Name formatting, Markdown for speech, TTS, social URL normalization, connectivity helpers |
+| `domain/model/` | Domain models independent of Firebase and UI |
+| `domain/repository/` | Persistence and auth contracts with typed results |
+| `domain/usecase/` | Application operations (articles, auth, settings, reading, stars) |
+| `data/article/` | Article DTOs, mappers, repository (including realtime article + content) |
+| `data/auth/` | Firebase Auth, Google Credential Manager, GitHub OAuth |
+| `data/settings/` | Account settings in `user_profiles` |
+| `data/reading/`, `data/favorite/`, `data/star/` | Continue reading, favorites, star observations |
+| `ui/articles/` | Home feed sections, detail, editor, community, cards |
+| `ui/articles/community/` | Community list, filter, search, pagination VM |
+| `ui/home/` | Guest home and guest article/profile entry points |
+| `ui/auth/` | Login, session, account linking |
+| `ui/profile/` | Author profile (shared header style) |
+| `ui/settings/` | Account settings |
+| `ui/splash/` | Splash and offline screen |
+| `ui/components/`, `ui/theme/` | Shared UI and tokens |
+| `di/` | Hilt modules |
 
 ### Author name update flow
 
-1. The user profile is saved first.
-2. The repository queries all articles by `authorUid`, page by page.
-3. `authorName` is updated in batches of up to 450 documents.
-4. The name in Firebase Authentication is updated.
-5. The app only shows success after all batches and the name update have finished.
+1. User profile is saved.
+2. Articles are queried by `authorUid` in pages.
+3. `authorName` is updated in batches (up to 450 docs).
+4. Firebase Authentication display name is updated.
+5. Success is reported only after batches and Auth update complete.
 
 > [!NOTE]
-> If a failure occurs after some batches, synchronization may be left partial. Saving again repeats the update for the remaining articles.
+> A failure mid-batch can leave partial sync. Saving again continues remaining articles.
 
 ---
 
@@ -202,25 +238,44 @@ Compose Screen -> ViewModel -> UseCase -> Repository (interface)
 
 | Field | Description |
 | --- | --- |
-| `authorUid` | Owner's UID; used to load the profile and sync the name |
-| `authorName`, `authorUsername`, `authorPhotoUrl` | Author display data |
-| `category`, `title`, `subtitle`, `content`, `linkUrl` | Article content |
-| `starredBy` | UIDs of the users who rated the article |
-| `starCount` | Total stars, updated in the same transaction as `starredBy` |
-| `createdAt`, `updatedAt` | Creation and update timestamps |
+| `authorUid` | Owner UID |
+| `authorName`, `authorPhotoUrl` | Display data |
+| `category`, `title`, `subtitle` | Metadata |
+| `excerpt` | Short text derived from body on write |
+| `starredBy`, `starCount` | Ratings |
+| `viewCount` | Unique views (with `views` subcollection) |
+| `createdAt`, `updatedAt` | Timestamps |
 
-The explore list combines real-time observation with paginated loading.
+Body text is **not** stored only on the root document in the current design.
+
+### `articles/{articleId}/content/body`
+
+| Field | Description |
+| --- | --- |
+| `text` | Full Markdown content |
+
+Detail screens listen to both the article document and this content document for real-time updates.
 
 ### `user_profiles/{uid}`
 
 | Field | Description |
 | --- | --- |
 | `name` | Display name |
-| `github` | GitHub link (optional) |
-| `linkedin` | LinkedIn link (optional) |
+| `github`, `linkedin` | Optional social links |
+| `photoUrl` | Optional photo |
 
-- The email is **not** saved in this document: it comes from Firebase Authentication.
-- Legacy age and Instagram fields are removed when settings are saved.
+Email is not stored here; it comes from Firebase Authentication.
+
+### Other collections
+
+| Path | Role |
+| --- | --- |
+| `articles/{id}/views/{viewerUid}` | Unique view records |
+| `user_reading/{uid}/items/{articleId}` | Continue-reading progress |
+| Favorite-author docs (per user) | Authors the user has starred |
+| Received-star projections (as implemented) | Mural inputs for the author |
+
+Exact paths follow the repositories under `data/`.
 
 ---
 
@@ -228,37 +283,35 @@ The explore list combines real-time observation with paginated loading.
 
 ### Firestore rules
 
-[`docs/firestore.rules.txt`](../docs/firestore.rules.txt) contains the reference version of the rules. They allow:
+Reference rules live in [`docs/firestore.rules.txt`](../docs/firestore.rules.txt). Intent:
 
-- each authenticated user to read and write only their own `user_profiles/{uid}`;
-- public article reads, with content writes restricted to the authenticated author;
-- any authenticated user to update the star fields.
+- each user reads/writes only their own `user_profiles/{uid}`;
+- articles are publicly readable; content writes restricted to the author;
+- authenticated users may update star-related fields as defined by the rules;
+- reading-progress and related private paths scoped to the owner.
 
 ### To address before production
 
 > [!WARNING]
-> **Star rule:** it limits which fields may change, but does not verify that changes to `starredBy` involve only the authenticated user's UID. This allows manipulating other users' ratings. Tighten this validation before publishing.
-
-> [!WARNING]
-> **Account deletion:** the current operation removes only the Firebase Authentication identity. The `user_profiles/{uid}` document and already published articles remain. To erase them as well, implement the cleanup in a trusted backend (for example, a Cloud Function triggered by account deletion). Do not grant the client broad delete permissions.
+> **Star rule:** field allow-lists alone may not guarantee that `starredBy` only changes for the authenticated UID. Tighten validation before production.
 
 ---
 
 ## Testing
 
-The current unit tests cover:
+Unit tests currently cover areas such as:
 
-- converting articles into cards;
+- article → card mapping;
 - name formatting;
-- preparing Markdown for read-aloud.
+- Markdown preparation for speech.
 
 ```bash
 ./gradlew :app:testDebugUnitTest
 ```
 
-UI flows and Firebase integration do not have instrumented or integration tests yet. The sample instrumented test was removed, and expanding coverage is planned for future stages.
+UI and Firebase integration tests are still limited. Expanding coverage is planned.
 
-> **Academic scope:** this version prioritizes delivering the main flows and a clear architecture.
+> **Academic scope:** this version prioritizes main flows and a clear architecture.
 
 ---
 
@@ -272,7 +325,10 @@ app/src/
 │   │   ├── data/
 │   │   │   ├── article/
 │   │   │   ├── auth/
-│   │   │   └── settings/
+│   │   │   ├── favorite/
+│   │   │   ├── reading/
+│   │   │   ├── settings/
+│   │   │   └── star/
 │   │   ├── di/
 │   │   ├── domain/
 │   │   │   ├── model/
@@ -280,8 +336,13 @@ app/src/
 │   │   │   └── usecase/
 │   │   ├── ui/
 │   │   │   ├── articles/
+│   │   │   │   ├── community/
+│   │   │   │   ├── detail/
+│   │   │   │   ├── editor/
+│   │   │   │   └── components/
 │   │   │   ├── auth/
 │   │   │   ├── components/
+│   │   │   ├── home/
 │   │   │   ├── profile/
 │   │   │   ├── settings/
 │   │   │   ├── splash/
@@ -289,8 +350,8 @@ app/src/
 │   │   ├── MainActivity.kt
 │   │   └── MindInkApplication.kt
 │   └── res/
-├── test/            # JVM unit tests
-└── androidTest/     # Android instrumented tests
+├── test/
+└── androidTest/
 ```
 
 ---
@@ -305,6 +366,6 @@ app/src/
 | Maycon Soares De Resende | 125111404445 | Test User |
 | Fabricio Rocha Souza Neves | 125111399975 | Test User |
 | Gustavo Silva Lourenço | 125111410319 | Test User |
-| Gustavo Morais de Oliveira Siqueira | 1242022304 | Vídeo Maker |
-| Bruno Resende Ribeiro | 124220140 | Creator PPTX |
-| Ana Júlia Brum | 124222016 | Creator of the Report |
+| Gustavo Morais de Oliveira Siqueira | 1242022304 | Video Maker |
+| Bruno Resende Ribeiro | 124220140 | PPTX Creator |
+| Ana Júlia Brum | 124222016 | Report Creator |
