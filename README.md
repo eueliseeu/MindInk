@@ -18,9 +18,9 @@
 
 ## Sobre o projeto
 
-O **MindInk** é um aplicativo Android para publicação e leitura de artigos sobre tecnologia: desenvolvimento, inteligência artificial, dispositivos móveis, cloud e temas relacionados.
+O **MindInk** é um aplicativo Android para publicação e leitura de artigos sobre tecnologia: desenvolvimento, inteligência artificial, mobile, cloud e temas relacionados.
 
-Os destaques são o login social (Google e GitHub), perfis públicos de autores, edição de artigos em Markdown e **leitura em voz alta** para acessibilidade.
+Os destaques são o login social (Google e GitHub), perfis públicos de autores, edição em Markdown com pré-visualização, feed da comunidade com filtros e scroll infinito, tratamento de offline e **leitura em voz alta** para acessibilidade.
 
 > **Projeto acadêmico:** A3 de Usabilidade, Desenvolvimento Web, Mobile e Jogos.
 
@@ -29,9 +29,9 @@ Adicione aqui capturas de tela do app. Exemplo:
 
 ## Telas
 
-| Início | Artigo | Editor | Perfil |
+| Início | Comunidade | Artigo | Editor |
 | :---: | :---: | :---: | :---: |
-| ![Início](docs/screenshots/home.png) | ![Artigo](docs/screenshots/article.png) | ![Editor](docs/screenshots/editor.png) | ![Perfil](docs/screenshots/profile.png) |
+| ![Início](docs/screenshots/home.png) | ![Comunidade](docs/screenshots/community.png) | ![Artigo](docs/screenshots/article.png) | ![Editor](docs/screenshots/editor.png) |
 -->
 
 ## Sumário
@@ -41,13 +41,17 @@ Adicione aqui capturas de tela do app. Exemplo:
   - [Sumário](#sumário)
   - [Funcionalidades](#funcionalidades)
     - [Conta e autenticação](#conta-e-autenticação)
-    - [Artigos](#artigos)
+    - [Home (usuário logado)](#home-usuário-logado)
+    - [Comunidade e artigos](#comunidade-e-artigos)
+    - [Experiência de leitura](#experiência-de-leitura)
     - [Autores](#autores)
+    - [Modo convidado](#modo-convidado)
     - [Acessibilidade](#acessibilidade)
   - [Tecnologias](#tecnologias)
   - [Como executar](#como-executar)
     - [Requisitos](#requisitos)
     - [Passo a passo](#passo-a-passo)
+    - [Índices do Firestore](#índices-do-firestore)
     - [Comandos úteis](#comandos-úteis)
   - [Arquitetura](#arquitetura)
     - [Fluxo de dependências](#fluxo-de-dependências)
@@ -55,7 +59,9 @@ Adicione aqui capturas de tela do app. Exemplo:
     - [Fluxo de atualização do nome do autor](#fluxo-de-atualização-do-nome-do-autor)
   - [Modelo de dados (Firestore)](#modelo-de-dados-firestore)
     - [`articles/{articleId}`](#articlesarticleid)
+    - [`articles/{articleId}/content/body`](#articlesarticleidcontentbody)
     - [`user_profiles/{uid}`](#user_profilesuid)
+    - [Outras coleções](#outras-coleções)
   - [Segurança e limitações conhecidas](#segurança-e-limitações-conhecidas)
     - [Regras do Firestore](#regras-do-firestore)
     - [Pendências antes de ir para produção](#pendências-antes-de-ir-para-produção)
@@ -70,26 +76,45 @@ Adicione aqui capturas de tela do app. Exemplo:
 ### Conta e autenticação
 
 - **Login social** com Google ou GitHub via Firebase Authentication.
-- **Vinculação de contas:** quando os provedores entram em conflito, o app oferece o fluxo para vincular as duas contas.
-- **Configurações:** edição de nome e links sociais (GitHub e LinkedIn). O e-mail vem do provedor de autenticação e é somente leitura.
-- **Exclusão de conta** com confirmação e tratamento da exigência de autenticação recente.
-- **Menu do avatar** com acesso separado a perfil, configurações e sair.
+- **Vinculação de contas** quando os provedores entram em conflito.
+- **Configurações:** edição de nome e links sociais (GitHub e LinkedIn). O e-mail vem do provedor e é somente leitura.
+- **Exclusão de conta** com confirmação e tratamento de autenticação recente.
+- **Menu do avatar** com perfil, configurações e sair (borda de evento opcional no avatar da top bar).
 
-### Artigos
+### Home (usuário logado)
 
-- **Criação e edição** com título, subtítulo, categoria, conteúdo em Markdown e pré-visualização.
-- **Leitura** com renderização de Markdown.
-- **Página inicial** com artigos recentes, autores e lista paginada para explorar mais conteúdo.
-- **Avaliação por estrelas:** a interface destaca a estrela de quem já curtiu; contagem e lista de usuários são atualizadas no Firestore.
+- Saudação e acesso à comunidade.
+- **Mural:** estrelas recebidas nos seus artigos e novos posts de autores que você curtiu (limite de itens; abre perfil ou artigo conforme o tipo).
+- **Continue lendo:** artigos abertos sem scroll até o fim (Firestore para logados; pendências de guest podem sincronizar no login).
+- Autores favoritos a partir das estrelas que você deu.
+
+### Comunidade e artigos
+
+- **Tela Comunidade:** filtro por categoria (**Comunidade** = todos, ou Tech / IA / Mobile / Cloud / DevOps) no servidor, busca local nos itens já carregados, scroll infinito, botão voltar ao topo e FAB de criar.
+- **Criação e edição** na mesma tela (título, subtítulo, categoria, Markdown e preview). Só o **autor** edita; lápis discreto ao lado do avatar do autor no detalhe.
+- **Cards** com categoria, estrelas e visualizações.
+
+### Experiência de leitura
+
+- Renderização Markdown no detalhe.
+- **Atualização em tempo real:** com o detalhe aberto, listeners do Firestore atualizam metadados e corpo; a gravação do autor aparece para todos sem reabrir o artigo.
+- Estrelas e contagem de views únicas (subcoleção).
+- Gate offline: sem conexão, o app mostra a tela de offline até a rede voltar.
 
 ### Autores
 
-- **Perfil público** com artigos publicados, total de estrelas e links opcionais.
-- **Sincronização de nome:** ao salvar um novo nome, o app atualiza o perfil no Firebase e o campo `authorName` em todos os artigos do autor, em lotes paginados.
+- **Perfil público** (faixa, verificado, links sociais, lista de artigos, totais de views/estrelas).
+- Perfil próprio com marcador `(me)`.
+- **Sincronização de nome:** ao salvar, atualiza Firebase Auth e `authorName` nos artigos do autor em lotes paginados.
+
+### Modo convidado
+
+- Navegar na home, abrir artigos (com limites de preview quando aplicável) e perfis.
+- Login exigido para ações autenticadas.
 
 ### Acessibilidade
 
-- **Leitura em voz alta** (Android TextToSpeech) de título, subtítulo e conteúdo em português, com remoção da sintaxe Markdown e controle para iniciar ou parar.
+- **Leitura em voz alta** (TextToSpeech) de título, subtítulo e conteúdo em português, sem sintaxe Markdown, com iniciar/parar.
 
 ---
 
@@ -99,16 +124,16 @@ Adicione aqui capturas de tela do app. Exemplo:
 | --- | --- |
 | Linguagem | Kotlin |
 | Interface | Jetpack Compose, Material 3 e Compose BOM |
-| Arquitetura | MVVM, com separação em `ui`, `domain`, `data` e `core` |
+| Arquitetura | MVVM com `ui`, `domain`, `data` e `core` |
 | Injeção de dependência | Hilt e KSP |
-| Autenticação | Firebase Authentication, Credential Manager, provedores Google e GitHub |
+| Autenticação | Firebase Authentication, Credential Manager, Google e GitHub |
 | Banco de dados | Cloud Firestore |
 | Imagens | Coil 3 |
 | Markdown | multiplatform-markdown-renderer |
 | Voz | Android TextToSpeech |
 | Testes | JUnit 4 |
 
-> As versões exatas de SDKs, plugins e bibliotecas estão em `app/build.gradle.kts` e `gradle/libs.versions.toml`.
+> Versões exatas em `app/build.gradle.kts` e `gradle/libs.versions.toml`.
 
 ---
 
@@ -117,28 +142,37 @@ Adicione aqui capturas de tela do app. Exemplo:
 ### Requisitos
 
 - Android Studio compatível com o Android Gradle Plugin do projeto
-- JDK 21 para o daemon do Gradle (definido em `gradle/gradle-daemon-jvm.properties`)
-- Dispositivo ou emulador com Android **API 24 ou superior**
-- Um projeto no [Firebase Console](https://console.firebase.google.com/)
+- JDK 21 para o daemon do Gradle (`gradle/gradle-daemon-jvm.properties`)
+- Dispositivo ou emulador com Android **API 24+**
+- Projeto no [Firebase Console](https://console.firebase.google.com/)
 
-> O código Java/Kotlin usa compatibilidade com Java 11. O projeto compila contra a API 37 e define `targetSdk` 35.
+> Compatibilidade Java/Kotlin 11. Compila contra API 37 com `targetSdk` 35.
 
 ### Passo a passo
 
-1. **Clone o repositório** e abra-o no Android Studio.
-2. **Adicione o `google-services.json`** na pasta `app/` (o arquivo é ignorado pelo Git).
-3. **Habilite os provedores** Google e GitHub no Firebase Authentication e configure as credenciais OAuth de cada um.
-4. **Cadastre o SHA-1** do keystore de debug no projeto Firebase.
-5. **Configure o Cloud Firestore** e publique as regras de referência de [`docs/firestore.rules.txt`](docs/firestore.rules.txt) pelo Firebase Console. O Gradle não as aplica automaticamente.
-6. **Sincronize o Gradle** e execute o app no dispositivo ou emulador.
+1. **Clone** o repositório e abra no Android Studio.
+2. **Adicione o `google-services.json`** em `app/` (ignorado pelo Git).
+3. **Habilite** Google e GitHub no Firebase Authentication e configure o OAuth.
+4. **Cadastre o SHA-1** de debug no projeto Firebase.
+5. **Configure o Cloud Firestore** e publique as regras de [`docs/firestore.rules.txt`](docs/firestore.rules.txt) (o Gradle não publica regras).
+6. **Crie os índices compostos** exigidos pelos filtros da comunidade (abaixo).
+7. **Sincronize o Gradle** e execute.
+
+### Índices do Firestore
+
+Filtro por categoria na comunidade:
+
+```text
+Coleção: articles
+Campos: category Ascending, createdAt Descending
+```
+
+Se aparecer `FAILED_PRECONDITION` com link no log, abra o link e crie o índice. Consultas por autor podem exigir `authorUid` + `createdAt` conforme a query.
 
 ### Comandos úteis
 
 ```bash
-# Gerar o APK de debug
 ./gradlew :app:assembleDebug
-
-# Rodar os testes unitários
 ./gradlew :app:testDebugUnitTest
 ```
 
@@ -146,13 +180,13 @@ Adicione aqui capturas de tela do app. Exemplo:
 
 ## Arquitetura
 
-O app é um único módulo Android (`:app`) seguindo **MVVM** com Clean Architecture simplificada.
+Módulo único (`:app`) com **MVVM** e Clean Architecture simplificada.
 
-- O `MainActivity` controla os destinos principais com estado Compose salvo e callbacks de navegação.
-- As telas observam os ViewModels por `StateFlow`.
-- Os listeners do Firestore são expostos como `Flow` (via `callbackFlow`) e mantêm artigos, avaliações e perfis atualizados em tempo real.
-- Operações pontuais usam coroutines e aguardam as tarefas assíncronas do Firebase.
-- A camada `data` não depende dos modelos de apresentação.
+- `MainActivity` controla destinos com flags `rememberSaveable` e callbacks.
+- Telas coletam `StateFlow` dos ViewModels.
+- Listeners do Firestore viram `Flow` (`callbackFlow`) para listas, detalhe (metadados + conteúdo), estrelas e progresso de leitura.
+- Escritas pontuais usam coroutines e Tasks do Firebase.
+- A camada `data` não depende de modelos de UI.
 
 ### Fluxo de dependências
 
@@ -167,32 +201,34 @@ Compose Screen -> ViewModel -> UseCase -> Repository (interface)
 
 | Pacote | Responsabilidade |
 | --- | --- |
-| `core/` | Formatação de nomes, preparação de Markdown para voz e suporte a TextToSpeech |
-| `domain/model/` | Modelos independentes das APIs do Firebase e da interface |
-| `domain/repository/` | Contratos de persistência e autenticação, com resultados tipados |
-| `domain/usecase/` | Operações de aplicação para artigos, autenticação e configurações |
-| `data/article/` | DTOs, conversão Firestore ↔ domínio e repositório de artigos |
-| `data/auth/` | Firebase Authentication, Google Credential Manager e GitHub OAuth |
-| `data/settings/` | DTO e persistência das configurações em `user_profiles` |
-| `ui/articles/` | Lista, detalhes, editor, componentes e modelos de apresentação |
-| `ui/articles/mapper/` | Conversão de modelos de domínio para modelos dos cards |
-| `ui/auth/` | Login, estado de sessão e vinculação de provedores |
-| `ui/profile/` | Perfil público do autor e links sociais |
-| `ui/settings/` | Tela, estado e ViewModel das configurações da conta |
-| `ui/splash/` | Tela de abertura |
-| `ui/components/` e `ui/theme/` | Componentes compartilhados e tokens visuais |
-| `di/` | Bindings e providers do Hilt |
+| `core/` | Formatação de nomes, Markdown para voz, TTS, URLs sociais, conectividade |
+| `domain/model/` | Modelos independentes de Firebase e UI |
+| `domain/repository/` | Contratos de persistência e auth com resultados tipados |
+| `domain/usecase/` | Casos de uso (artigos, auth, settings, leitura, estrelas) |
+| `data/article/` | DTOs, mappers e repositório (incluindo realtime de artigo e conteúdo) |
+| `data/auth/` | Firebase Auth, Credential Manager, GitHub OAuth |
+| `data/settings/` | Configurações em `user_profiles` |
+| `data/reading/`, `data/favorite/`, `data/star/` | Continue lendo, favoritos e estrelas |
+| `ui/articles/` | Home, detalhe, editor, comunidade e cards |
+| `ui/articles/community/` | Lista da comunidade, filtro, busca e paginação |
+| `ui/home/` | Home e detalhe/perfil para guest |
+| `ui/auth/` | Login, sessão e vinculação |
+| `ui/profile/` | Perfil do autor |
+| `ui/settings/` | Configurações da conta |
+| `ui/splash/` | Splash e tela offline |
+| `ui/components/`, `ui/theme/` | UI compartilhada e tema |
+| `di/` | Módulos Hilt |
 
 ### Fluxo de atualização do nome do autor
 
-1. O perfil do usuário é salvo primeiro.
-2. O repositório consulta todos os artigos por `authorUid`, em páginas.
-3. `authorName` é atualizado em lotes de até 450 documentos.
-4. O nome no Firebase Authentication é atualizado.
-5. O app só exibe sucesso depois que todos os lotes e a atualização do nome terminarem.
+1. Perfil salvo.
+2. Artigos consultados por `authorUid` em páginas.
+3. `authorName` atualizado em lotes (até 450 docs).
+4. Nome no Firebase Authentication atualizado.
+5. Sucesso só após lotes e Auth.
 
 > [!NOTE]
-> Se ocorrer uma falha após alguns lotes, a sincronização pode ficar parcial. Salvar novamente repete a atualização para os artigos restantes.
+> Falha no meio do lote pode deixar sync parcial. Salvar de novo continua o restante.
 
 ---
 
@@ -202,25 +238,44 @@ Compose Screen -> ViewModel -> UseCase -> Repository (interface)
 
 | Campo | Descrição |
 | --- | --- |
-| `authorUid` | UID do proprietário; usado para carregar o perfil e sincronizar o nome |
-| `authorName`, `authorUsername`, `authorPhotoUrl` | Dados de exibição do autor |
-| `category`, `title`, `subtitle`, `content`, `linkUrl` | Conteúdo do artigo |
-| `starredBy` | UIDs dos usuários que avaliaram o artigo |
-| `starCount` | Total de estrelas, atualizado na mesma transação de `starredBy` |
-| `createdAt`, `updatedAt` | Datas de criação e atualização |
+| `authorUid` | UID do dono |
+| `authorName`, `authorPhotoUrl` | Exibição |
+| `category`, `title`, `subtitle` | Metadados |
+| `excerpt` | Resumo gerado na gravação |
+| `starredBy`, `starCount` | Avaliações |
+| `viewCount` | Views únicas (com subcoleção `views`) |
+| `createdAt`, `updatedAt` | Timestamps |
 
-A lista de exploração combina observação em tempo real com carregamento paginado.
+O corpo completo não fica só no documento raiz neste desenho.
+
+### `articles/{articleId}/content/body`
+
+| Campo | Descrição |
+| --- | --- |
+| `text` | Markdown completo |
+
+O detalhe observa o documento do artigo e este documento de conteúdo em tempo real.
 
 ### `user_profiles/{uid}`
 
 | Campo | Descrição |
 | --- | --- |
 | `name` | Nome de exibição |
-| `github` | Link do GitHub (opcional) |
-| `linkedin` | Link do LinkedIn (opcional) |
+| `github`, `linkedin` | Links opcionais |
+| `photoUrl` | Foto opcional |
 
-- O e-mail **não** é salvo nesse documento: ele vem do Firebase Authentication.
-- Os campos antigos de idade e Instagram são removidos quando as configurações são salvas.
+E-mail não é gravado aqui; vem do Firebase Authentication.
+
+### Outras coleções
+
+| Caminho | Função |
+| --- | --- |
+| `articles/{id}/views/{viewerUid}` | Views únicas |
+| `user_reading/{uid}/items/{articleId}` | Continue lendo |
+| Docs de autores favoritos (por usuário) | Autores que o usuário curtiu |
+| Projeções de estrelas recebidas | Entradas do Mural |
+
+Caminhos exatos seguem os repositórios em `data/`.
 
 ---
 
@@ -228,37 +283,35 @@ A lista de exploração combina observação em tempo real com carregamento pagi
 
 ### Regras do Firestore
 
-O arquivo [`docs/firestore.rules.txt`](docs/firestore.rules.txt) contém a versão de referência das regras. Elas permitem:
+Referência em [`docs/firestore.rules.txt`](docs/firestore.rules.txt). Intenção:
 
-- que cada usuário autenticado leia e grave apenas o próprio `user_profiles/{uid}`;
-- leitura pública de artigos, com escrita de conteúdo restrita ao autor autenticado;
-- atualização dos campos de estrelas por qualquer usuário autenticado.
+- cada usuário lê/grava só o próprio `user_profiles/{uid}`;
+- artigos com leitura pública; escrita de conteúdo restrita ao autor;
+- campos de estrela conforme as regras para autenticados;
+- progresso de leitura e paths privados no dono.
 
 ### Pendências antes de ir para produção
 
 > [!WARNING]
-> **Regra de estrelas:** ela limita quais campos podem ser alterados, mas não verifica se a mudança em `starredBy` envolve apenas o UID de quem está autenticado. Isso permite manipular avaliações de outros usuários. Restrinja essa validação antes de publicar.
-
-> [!WARNING]
-> **Exclusão de conta:** a operação atual remove somente a identidade do Firebase Authentication. O documento `user_profiles/{uid}` e os artigos já publicados permanecem. Para apagá-los também, implemente a limpeza em um backend confiável (por exemplo, uma Cloud Function acionada pela exclusão da conta). Não conceda ao cliente permissões amplas de exclusão.
+> **Regra de estrelas:** só listar campos permitidos pode não garantir que `starredBy` mude apenas para o UID autenticado. Reforce antes de produção.
 
 ---
 
 ## Testes
 
-Os testes unitários atuais cobrem:
+Testes unitários cobrem, entre outros:
 
-- conversão de artigos para cards;
+- conversão artigo → card;
 - formatação de nomes;
-- preparação de Markdown para leitura em voz alta.
+- preparação de Markdown para voz.
 
 ```bash
 ./gradlew :app:testDebugUnitTest
 ```
 
-Os fluxos de interface e a integração com o Firebase ainda não têm testes instrumentados ou de integração. O teste instrumentado de exemplo foi removido, e a ampliação da cobertura está prevista para etapas futuras.
+UI e integração Firebase ainda têm cobertura limitada.
 
-> **Escopo acadêmico:** esta versão prioriza a entrega dos fluxos principais e uma arquitetura clara.
+> **Escopo acadêmico:** prioriza fluxos principais e arquitetura clara.
 
 ---
 
@@ -272,7 +325,10 @@ app/src/
 │   │   ├── data/
 │   │   │   ├── article/
 │   │   │   ├── auth/
-│   │   │   └── settings/
+│   │   │   ├── favorite/
+│   │   │   ├── reading/
+│   │   │   ├── settings/
+│   │   │   └── star/
 │   │   ├── di/
 │   │   ├── domain/
 │   │   │   ├── model/
@@ -280,8 +336,13 @@ app/src/
 │   │   │   └── usecase/
 │   │   ├── ui/
 │   │   │   ├── articles/
+│   │   │   │   ├── community/
+│   │   │   │   ├── detail/
+│   │   │   │   ├── editor/
+│   │   │   │   └── components/
 │   │   │   ├── auth/
 │   │   │   ├── components/
+│   │   │   ├── home/
 │   │   │   ├── profile/
 │   │   │   ├── settings/
 │   │   │   ├── splash/
@@ -289,8 +350,8 @@ app/src/
 │   │   ├── MainActivity.kt
 │   │   └── MindInkApplication.kt
 │   └── res/
-├── test/            # Testes unitários (JVM)
-└── androidTest/     # Testes instrumentados (Android)
+├── test/
+└── androidTest/
 ```
 
 ---
