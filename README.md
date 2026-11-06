@@ -18,7 +18,7 @@
 
 ## Sobre o projeto
 
-O **MindInk** é um aplicativo Android para publicação e leitura de artigos sobre tecnologia: desenvolvimento, inteligência artificial, mobile, cloud e temas relacionados.
+O **MindInk** é um aplicativo Android para publicação e leitura de artigos sobre tecnologia: desenvolvimento, inteligência artificial, mobile, cloud e outros temas relacionados.
 
 Os destaques são o login social (Google e GitHub), perfis públicos de autores, edição em Markdown com pré-visualização, feed da comunidade com filtros e scroll infinito, tratamento de offline e **leitura em voz alta** para acessibilidade.
 
