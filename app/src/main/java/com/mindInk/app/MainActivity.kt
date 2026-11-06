@@ -65,6 +65,7 @@ class MainActivity : ComponentActivity() {
                 var showSplash by rememberSaveable { mutableStateOf(true) }
                 var showLogin by rememberSaveable { mutableStateOf(false) }
                 var showCreateArticle by rememberSaveable { mutableStateOf(false) }
+                var editingArticleId by rememberSaveable { mutableStateOf<String?>(null) }
                 var showCommunityArticles by rememberSaveable { mutableStateOf(false) }
                 var showAccountSettings by rememberSaveable { mutableStateOf(false) }
                 var profileNameOverride by rememberSaveable { mutableStateOf<String?>(null) }
@@ -92,7 +93,10 @@ class MainActivity : ComponentActivity() {
                     when {
                         selectedArticleId != null -> selectedArticleId = null
                         selectedAuthorUid != null -> selectedAuthorUid = null
-                        showCreateArticle -> showCreateArticle = false
+                        showCreateArticle -> {
+                            showCreateArticle = false
+                            editingArticleId = null
+                        }
                         showCommunityArticles -> showCommunityArticles = false
                         showAccountSettings -> showAccountSettings = false
                         showLogin -> showLogin = false
@@ -131,6 +135,7 @@ class MainActivity : ComponentActivity() {
                                     val openMyProfile: () -> Unit = {
                                         selectedArticleId = null
                                         showCreateArticle = false
+                                        editingArticleId = null
                                         showCommunityArticles = false
                                         showAccountSettings = false
                                         selectedAuthorUid = current.user.uid
@@ -139,6 +144,7 @@ class MainActivity : ComponentActivity() {
                                         selectedArticleId = null
                                         selectedAuthorUid = null
                                         showCreateArticle = false
+                                        editingArticleId = null
                                         showCommunityArticles = false
                                         showAccountSettings = true
                                     }
@@ -154,6 +160,7 @@ class MainActivity : ComponentActivity() {
                                                     selectedArticleId = null
                                                     selectedAuthorUid = null
                                                     showCreateArticle = false
+                                                    editingArticleId = null
                                                     showCommunityArticles = false
                                                     profileNameOverride = null
                                                     profileNameOverrideUid = null
@@ -165,6 +172,31 @@ class MainActivity : ComponentActivity() {
                                             )
                                         }
 
+                                        showCreateArticle -> {
+                                            CreateEditArticleScreen(
+                                                user = currentUser,
+                                                articleId = editingArticleId,
+                                                onBack = {
+                                                    showCreateArticle = false
+                                                    editingArticleId = null
+                                                },
+                                                onSaved = { isEdit ->
+                                                    showCreateArticle = false
+                                                    editingArticleId = null
+                                                    toast = ToastMessage(
+                                                        if (isEdit) {
+                                                            "Artigo atualizado."
+                                                        } else {
+                                                            "Seu artigo foi publicado."
+                                                        }
+                                                    )
+                                                },
+                                                onSignOut = viewModel::onSignOutClick,
+                                                onProfileClick = openMyProfile,
+                                                onSettingsClick = openAccountSettings
+                                            )
+                                        }
+
                                         selectedArticleId != null -> {
                                             selectedArticleId?.let { articleId ->
                                                 ArticleDetailScreen(
@@ -173,7 +205,11 @@ class MainActivity : ComponentActivity() {
                                                     onBack = { selectedArticleId = null },
                                                     onSignOut = viewModel::onSignOutClick,
                                                     onProfileClick = openMyProfile,
-                                                    onSettingsClick = openAccountSettings
+                                                    onSettingsClick = openAccountSettings,
+                                                    onEditClick = {
+                                                        editingArticleId = articleId
+                                                        showCreateArticle = true
+                                                    }
                                                 )
                                             }
                                         }
@@ -195,20 +231,6 @@ class MainActivity : ComponentActivity() {
                                             }
                                         }
 
-                                        showCreateArticle -> {
-                                            CreateEditArticleScreen(
-                                                user = currentUser,
-                                                onBack = { showCreateArticle = false },
-                                                onSaved = {
-                                                    showCreateArticle = false
-                                                    toast = ToastMessage("Seu artigo foi publicado.")
-                                                },
-                                                onSignOut = viewModel::onSignOutClick,
-                                                onProfileClick = openMyProfile,
-                                                onSettingsClick = openAccountSettings
-                                            )
-                                        }
-
                                         showCommunityArticles -> {
                                             CommunityArticlesScreen(
                                                 user = currentUser,
@@ -220,6 +242,7 @@ class MainActivity : ComponentActivity() {
                                                     selectedArticleId = card.id
                                                 },
                                                 onCreateArticleClick = {
+                                                    editingArticleId = null
                                                     showCreateArticle = true
                                                 }
                                             )
@@ -247,6 +270,7 @@ class MainActivity : ComponentActivity() {
 
                                 else -> {
                                     showCreateArticle = false
+                                    editingArticleId = null
                                     showCommunityArticles = false
                                     showAccountSettings = false
 

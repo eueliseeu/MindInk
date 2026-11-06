@@ -57,6 +57,10 @@ interface ArticleRepository {
         limit: Long = 20
     ): Flow<ObserveArticlesResult>
 
+    fun observeArticle(articleId: String): Flow<Article?>
+
+    fun observeArticleContent(articleId: String): Flow<String?>
+
     suspend fun loadArticlesPage(
         pageSize: Long = 10,
         startAfterDocumentId: String? = null,

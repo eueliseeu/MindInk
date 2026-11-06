@@ -68,6 +68,40 @@ class ArticleRepositoryImpl @Inject constructor(
         )
     }
 
+    override fun observeArticle(articleId: String): Flow<Article?> = callbackFlow {
+        if (articleId.isBlank()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val registration = articles.document(articleId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(null)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.toArticle())
+            }
+        awaitClose { registration.remove() }
+    }
+
+    override fun observeArticleContent(articleId: String): Flow<String?> = callbackFlow {
+        if (articleId.isBlank()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val registration = firestore.articleContentRef(articleId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    trySend(null)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.getString(ARTICLE_CONTENT_FIELD))
+            }
+        awaitClose { registration.remove() }
+    }
+
     private fun observeArticlesQuery(
         query: Query,
         errorMessage: String
